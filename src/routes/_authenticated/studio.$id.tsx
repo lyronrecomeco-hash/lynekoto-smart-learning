@@ -198,9 +198,12 @@ function CanvasEditor() {
   }
 
   return (
-    <div className={`fixed inset-0 flex flex-col bg-canvas ${theme === "dark" ? "dark" : ""}`}>
+    <div className="flex flex-col bg-canvas h-[calc(100vh-3.5rem)]">
       {/* Top toolbar */}
-      <header className="flex h-14 flex-shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
+      <header className="flex h-12 flex-shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
+        <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5">
+          <Link to="/studio"><ArrowLeft className="h-3.5 w-3.5" /> Projetos</Link>
+        </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate({ to: "/studio" })}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
