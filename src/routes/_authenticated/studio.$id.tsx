@@ -270,15 +270,48 @@ function CanvasEditor() {
 
   if (isLoading || !project) {
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center bg-canvas">
+      <div className="flex h-screen items-center justify-center bg-canvas">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
 
+  // Split blocks into "steps" using `step` blocks as page-breaks.
+  const stepGroups: Block[][] = (() => {
+    const groups: Block[][] = [[]];
+    for (const b of blocks) {
+      if (b.type === "step") {
+        groups.push([]);
+      } else {
+        groups[groups.length - 1].push(b);
+      }
+    }
+    return groups;
+  })();
+  const totalSteps = stepGroups.length;
+  const safeStep = Math.min(currentStep, totalSteps - 1);
+  const visibleBlocks = settings.stepMode ? (stepGroups[safeStep] ?? []) : blocks;
+
+  const widthClass =
+    settings.contentWidth === "narrow" ? "max-w-2xl" :
+    settings.contentWidth === "wide" ? "max-w-5xl" : "max-w-3xl";
+  const layoutClass =
+    settings.layout === "cards" ? "canvas-layout-cards" :
+    settings.layout === "list" ? "canvas-layout-list" :
+    settings.layout === "compact" ? "canvas-layout-compact" : "";
+
+  const canvasBgStyle: React.CSSProperties = settings.background
+    ? (settings.background.startsWith("linear-") || settings.background.startsWith("radial-")
+        ? { backgroundImage: settings.background }
+        : { backgroundColor: settings.background })
+    : {};
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-    <div className="flex flex-col bg-canvas h-[calc(100vh-3.5rem)]">
+    <div
+      className="flex flex-col bg-canvas h-screen"
+      style={settings.accent ? ({ ["--primary" as any]: settings.accent } as React.CSSProperties) : undefined}
+    >
       {/* Top toolbar */}
       <header className="flex h-12 flex-shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
         <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5">
@@ -293,6 +326,21 @@ function CanvasEditor() {
         />
         <SaveIndicator status={saveStatus} />
         <div className="ml-auto flex items-center gap-2">
+          {settings.stepMode && totalSteps > 1 && (
+            <div className="flex items-center gap-1 rounded-md border border-border bg-background px-1 h-8">
+              <Button variant="ghost" size="icon" className="h-6 w-6"
+                onClick={() => setCurrentStep((s) => Math.max(0, s - 1))} disabled={safeStep === 0}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-xs font-mono px-1 tabular-nums">
+                Etapa {safeStep + 1} / {totalSteps}
+              </span>
+              <Button variant="ghost" size="icon" className="h-6 w-6"
+                onClick={() => setCurrentStep((s) => Math.min(totalSteps - 1, s + 1))} disabled={safeStep === totalSteps - 1}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -309,7 +357,7 @@ function CanvasEditor() {
 
       <div className="flex flex-1 min-h-0">
         {/* Left: Palette */}
-        <aside className="w-60 flex-shrink-0 border-r border-border bg-surface overflow-y-auto">
+        <aside className="w-60 flex-shrink-0 border-r border-border bg-surface overflow-y-auto scroll-clean">
           <div className="p-4">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Blocos</div>
             <div className="space-y-1">
@@ -329,29 +377,42 @@ function CanvasEditor() {
         </aside>
 
         {/* Center: Canvas */}
-        <div className="flex-1 overflow-y-auto bg-dots" onClick={() => setSelectedId(null)}>
-          <div className="mx-auto max-w-3xl py-10 px-6">
-            {blocks.length === 0 ? (
+        <div
+          className={`flex-1 overflow-y-auto scroll-clean ${settings.background ? "" : "bg-dots"}`}
+          style={canvasBgStyle}
+          onClick={() => setSelectedId(null)}
+        >
+          <div className={`mx-auto ${widthClass} py-10 px-6`}>
+            {settings.stepMode && totalSteps > 1 && (
+              <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+                <Layers className="h-3.5 w-3.5" />
+                Visualizando etapa {safeStep + 1} de {totalSteps}
+              </div>
+            )}
+            {visibleBlocks.length === 0 ? (
               <CanvasDropZone>
                 <EmptyCanvas onAdd={addBlock} />
               </CanvasDropZone>
             ) : (
               <CanvasDropZone>
-                <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-3">
-                    {blocks.map((b, i) => (
-                      <SortableBlock
-                        key={b.id}
-                        block={b}
-                        index={i}
-                        selected={selectedId === b.id}
-                        onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
-                        onUpdate={(d) => updateBlock(b.id, { data: d })}
-                        onRemove={() => removeBlock(b.id)}
-                        onDuplicate={() => duplicateBlock(b.id)}
-                        onInsertAfter={(t) => addBlock(t, i + 1)}
-                      />
-                    ))}
+                <SortableContext items={visibleBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                  <div className={`space-y-3 ${layoutClass}`}>
+                    {visibleBlocks.map((b) => {
+                      const i = blocks.findIndex((x) => x.id === b.id);
+                      return (
+                        <SortableBlock
+                          key={b.id}
+                          block={b}
+                          index={i}
+                          selected={selectedId === b.id}
+                          onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
+                          onUpdate={(d) => updateBlock(b.id, { data: d })}
+                          onRemove={() => removeBlock(b.id)}
+                          onDuplicate={() => duplicateBlock(b.id)}
+                          onInsertAfter={(t) => addBlock(t, i + 1)}
+                        />
+                      );
+                    })}
                   </div>
                 </SortableContext>
               </CanvasDropZone>
@@ -360,12 +421,12 @@ function CanvasEditor() {
         </div>
 
         {/* Right: Inspector */}
-        <aside className="w-80 flex-shrink-0 border-l border-border bg-surface overflow-y-auto">
+        <aside className="w-80 flex-shrink-0 border-l border-border bg-surface overflow-y-auto scroll-clean">
           <Inspector
             selected={selected}
             onUpdate={(patch) => selected && updateBlock(selected.id, patch as any)}
-            projectId={id}
-            onBlocksGenerated={(newBlocks) => setBlocks((prev) => [...prev, ...newBlocks])}
+            settings={settings}
+            onSettingsChange={(patch) => setSettings((s) => ({ ...s, ...patch }))}
             project={project}
           />
         </aside>
@@ -374,6 +435,7 @@ function CanvasEditor() {
     </DndContext>
   );
 }
+
 
 // ============ Save indicator ============
 function SaveIndicator({ status }: { status: string }) {
