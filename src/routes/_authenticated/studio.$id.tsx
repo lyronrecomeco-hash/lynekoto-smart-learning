@@ -23,7 +23,7 @@ import {
   ArrowLeft, CheckCircle2, CircleDot, Type, Image as ImageIcon, Minus,
   ListChecks, MessageSquare, GripVertical, Plus, Trash2, Copy, Play,
   Loader2, Save, MoreVertical, Settings2, Palette, BarChart3,
-  ArrowDownUp, AlignLeft, PenLine, Quote,
+  ArrowDownUp, AlignLeft, PenLine, Quote, ChevronRight, ChevronLeft, Layers,
 } from "lucide-react";
 import { useAutosave } from "@/hooks/use-autosave";
 
