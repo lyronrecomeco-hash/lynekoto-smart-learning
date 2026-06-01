@@ -274,7 +274,9 @@ function CanvasEditor() {
         <div className="flex-1 overflow-y-auto bg-dots" onClick={() => setSelectedId(null)}>
           <div className="mx-auto max-w-3xl py-10 px-6">
             {blocks.length === 0 ? (
-              <EmptyCanvas onAdd={addBlock} />
+              <CanvasDropZone>
+                <EmptyCanvas onAdd={addBlock} />
+              </CanvasDropZone>
             ) : (
               <CanvasDropZone>
                 <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
