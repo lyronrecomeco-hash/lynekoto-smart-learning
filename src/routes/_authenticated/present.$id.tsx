@@ -90,16 +90,36 @@ function Present() {
 
   const q = questions[idx];
   const last = idx === questions.length - 1;
-  const options: string[] = q.options ?? (q.type === "tf" ? ["Verdadeiro", "Falso"] : []);
-  const correctIdx: number =
-    q.correct_index !== undefined
-      ? q.correct_index
-      : q.type === "tf"
-        ? (q.correct ? 0 : 1)
-        : -1;
+
+  // Decide which "options" to render and whether there is a correct answer
+  let options: string[] = [];
+  let correctSet: Set<number> = new Set();
+  if (q.type === "mcq") {
+    options = q.options ?? [];
+    if (typeof q.correct_index === "number") correctSet.add(q.correct_index);
+  } else if (q.type === "tf") {
+    options = ["Verdadeiro", "Falso"];
+    correctSet.add(q.correct ? 0 : 1);
+  } else if (q.type === "multi") {
+    options = q.options ?? [];
+    (q.correct_indices ?? []).forEach((i: number) => correctSet.add(i));
+  } else if (q.type === "poll") {
+    options = q.options ?? [];
+  } else if (q.type === "ordering") {
+    options = q.items ?? [];
+  }
+
+  const cardBg: React.CSSProperties = q._bg
+    ? (q._bg.startsWith("linear-") || q._bg.startsWith("radial-")
+        ? { backgroundImage: q._bg }
+        : { backgroundColor: q._bg })
+    : {};
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground">
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-background text-foreground"
+      style={q._color ? ({ ["--primary" as any]: q._color } as React.CSSProperties) : undefined}
+    >
       <header className="flex items-center justify-between border-b border-border bg-surface px-6 py-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground font-display text-sm font-bold">
@@ -125,28 +145,36 @@ function Present() {
         </div>
       </header>
 
-      <main className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-12">
+      <main className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-12" style={cardBg}>
         <div className="w-full max-w-5xl">
           <div className="text-center">
             <div className="font-display text-[11px] uppercase tracking-widest text-muted-foreground">
-              Questão {idx + 1}
+              {q.type === "poll" ? "Enquete" : q.type === "quote" ? "Destaque" : q.type === "text" ? "Instrução" : q.type === "media" ? "Mídia" : `Questão ${idx + 1}`}
             </div>
             <h1 className="mt-4 font-display text-3xl md:text-5xl font-bold leading-tight">
-              {q.question || q.content || "—"}
+              {q.question || q.content || q.url || "—"}
             </h1>
+            {q.type === "quote" && q.author && (
+              <p className="mt-3 text-sm text-muted-foreground italic">— {q.author}</p>
+            )}
           </div>
 
-          {options.length > 0 && (
+          {q.type === "media" && q.url && (
+            <img src={q.url} alt={q.caption ?? ""} className="mx-auto mt-8 max-h-[55vh] rounded-xl border border-border object-contain" />
+          )}
+
+          {options.length > 0 && q.type !== "ordering" && (
             <div className="mt-10 grid gap-3 md:grid-cols-2">
               {options.map((opt, i) => {
-                const isRight = i === correctIdx;
+                const isRight = correctSet.has(i);
+                const hasAnswer = correctSet.size > 0;
                 return (
                   <div
                     key={i}
                     className={`rounded-xl border-2 bg-surface p-5 text-left transition-smooth ${
                       reveal && isRight
                         ? "border-success bg-success/10"
-                        : reveal && correctIdx >= 0
+                        : reveal && hasAnswer
                           ? "border-border opacity-50"
                           : "border-border hover:border-strong"
                     }`}
@@ -165,9 +193,26 @@ function Present() {
             </div>
           )}
 
+          {q.type === "ordering" && options.length > 0 && (
+            <ol className="mx-auto mt-10 max-w-2xl space-y-2">
+              {options.map((opt, i) => (
+                <li key={i} className="flex items-center gap-4 rounded-xl border-2 border-border bg-surface p-4">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground font-display font-bold">{i + 1}</span>
+                  <span className="font-display text-lg">{opt}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+
           {q.type === "short" && reveal && q.answer && (
             <div className="mx-auto mt-10 max-w-2xl rounded-xl border-2 border-success bg-success/10 p-6 text-center font-display text-2xl font-semibold">
               {q.answer}
+            </div>
+          )}
+
+          {q.type === "long" && q.guidance && reveal && (
+            <div className="mx-auto mt-10 max-w-2xl rounded-xl border border-border bg-surface p-6 text-sm text-muted-foreground">
+              <strong className="text-foreground">Orientação:</strong> {q.guidance}
             </div>
           )}
 
