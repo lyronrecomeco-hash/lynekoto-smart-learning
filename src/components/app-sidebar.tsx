@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Sparkles, Library, Users, GraduationCap,
-  BarChart3, ScanLine, Trophy, Settings, LogOut, ChevronDown,
+  BarChart3, ScanLine, Trophy, Settings, LogOut, ChevronDown, ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -44,15 +44,21 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
   const [profile, setProfile] = useState<{ name: string; email: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
-      setProfile({ name: data?.full_name ?? user.email?.split("@")[0] ?? "Usuário", email: user.email ?? "" });
+      const [{ data: p }, { data: roles }] = await Promise.all([
+        supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", user.id),
+      ]);
+      setProfile({ name: p?.full_name ?? user.email?.split("@")[0] ?? "Usuário", email: user.email ?? "" });
+      setIsAdmin(!!roles?.some((r: any) => r.role === "admin"));
     })();
   }, []);
+
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
