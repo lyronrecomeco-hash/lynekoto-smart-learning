@@ -323,6 +323,39 @@ function SaveIndicator({ status }: { status: string }) {
   return <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Save className="h-3 w-3" /> Sincronizado</span>;
 }
 
+function PaletteBlockButton({ type, def, onClick }: { type: BlockType; def: typeof BLOCK_DEFS[BlockType]; onClick: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `palette:${type}` });
+  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.65 : 1, zIndex: isDragging ? 50 : undefined };
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
+      className="w-full flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-left text-sm hover:border-primary/50 hover:bg-accent/40 transition-smooth group cursor-grab active:cursor-grabbing"
+    >
+      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-smooth">
+        <def.icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <div className="font-medium leading-tight">{def.label}</div>
+        <div className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">{def.description}</div>
+      </div>
+    </button>
+  );
+}
+
+function CanvasDropZone({ children }: { children: React.ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({ id: "canvas-dropzone" });
+  return (
+    <div ref={setNodeRef} className={`min-h-[32rem] rounded-2xl border border-dashed p-3 transition-smooth ${isOver ? "border-primary bg-primary/5" : "border-transparent"}`}>
+      {children}
+    </div>
+  );
+}
+
 // ============ Sortable Block wrapper ============
 function SortableBlock({
   block, index, selected, onSelect, onUpdate, onRemove, onDuplicate, onInsertAfter,
