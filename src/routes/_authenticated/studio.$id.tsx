@@ -399,24 +399,82 @@ function CanvasEditor() {
             ) : (
               <CanvasDropZone>
                 <SortableContext items={visibleBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-                  <div className={`space-y-3 ${layoutClass}`}>
-                    {visibleBlocks.map((b) => {
-                      const i = blocks.findIndex((x) => x.id === b.id);
-                      return (
-                        <SortableBlock
-                          key={b.id}
-                          block={b}
-                          index={i}
-                          selected={selectedId === b.id}
-                          onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
-                          onUpdate={(d) => updateBlock(b.id, { data: d })}
-                          onRemove={() => removeBlock(b.id)}
-                          onDuplicate={() => duplicateBlock(b.id)}
-                          onInsertAfter={(t) => addBlock(t, i + 1)}
-                        />
-                      );
-                    })}
-                  </div>
+                  {settings.stepMode ? (
+                    <div className={`step-group-active space-y-3 ${layoutClass}`}>
+                      {visibleBlocks.map((b) => {
+                        const i = blocks.findIndex((x) => x.id === b.id);
+                        return (
+                          <SortableBlock
+                            key={b.id} block={b} index={i}
+                            selected={selectedId === b.id}
+                            onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
+                            onUpdate={(d) => updateBlock(b.id, { data: d })}
+                            onRemove={() => removeBlock(b.id)}
+                            onDuplicate={() => duplicateBlock(b.id)}
+                            onInsertAfter={(t) => addBlock(t, i + 1)}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Render in step groups so the "Próximo" block visibly shortens / separates the previous group. */
+                    <div className="space-y-2">
+                      {(() => {
+                        const out: ReactNode[] = [];
+                        let groupIdx = 0;
+                        let buffer: Block[] = [];
+                        const flush = () => {
+                          if (buffer.length === 0) return;
+                          const items = [...buffer];
+                          out.push(
+                            <div key={`g-${groupIdx}`} className={`space-y-3 ${layoutClass} ${groupIdx > 0 ? "step-group-collapsed" : ""}`}>
+                              {items.map((b) => {
+                                const i = blocks.findIndex((x) => x.id === b.id);
+                                return (
+                                  <SortableBlock
+                                    key={b.id} block={b} index={i}
+                                    selected={selectedId === b.id}
+                                    onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
+                                    onUpdate={(d) => updateBlock(b.id, { data: d })}
+                                    onRemove={() => removeBlock(b.id)}
+                                    onDuplicate={() => duplicateBlock(b.id)}
+                                    onInsertAfter={(t) => addBlock(t, i + 1)}
+                                  />
+                                );
+                              })}
+                            </div>
+                          );
+                          buffer = [];
+                          groupIdx += 1;
+                        };
+                        blocks.forEach((b) => {
+                          if (b.type === "step") {
+                            flush();
+                            const i = blocks.findIndex((x) => x.id === b.id);
+                            out.push(
+                              <div key={b.id} className="flex items-center gap-3 my-3">
+                                <div className="h-px flex-1 bg-border-strong" />
+                                <SortableBlock
+                                  block={b} index={i}
+                                  selected={selectedId === b.id}
+                                  onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
+                                  onUpdate={(d) => updateBlock(b.id, { data: d })}
+                                  onRemove={() => removeBlock(b.id)}
+                                  onDuplicate={() => duplicateBlock(b.id)}
+                                  onInsertAfter={(t) => addBlock(t, i + 1)}
+                                />
+                                <div className="h-px flex-1 bg-border-strong" />
+                              </div>
+                            );
+                          } else {
+                            buffer.push(b);
+                          }
+                        });
+                        flush();
+                        return out;
+                      })()}
+                    </div>
+                  )}
                 </SortableContext>
               </CanvasDropZone>
             )}
