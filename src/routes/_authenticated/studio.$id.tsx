@@ -559,7 +559,14 @@ function SortableBlock({
         className={`rounded-xl border-2 bg-surface transition-smooth cursor-pointer overflow-hidden ${
           selected ? "border-primary shadow-soft" : "border-border hover:border-strong"
         }`}
-        style={block.color ? { borderLeftWidth: 5, borderLeftColor: block.color } : undefined}
+        style={{
+          ...(block.color ? { borderLeftWidth: 5, borderLeftColor: block.color } : {}),
+          ...(block.bg
+            ? (block.bg.startsWith("linear-") || block.bg.startsWith("radial-")
+                ? { backgroundImage: block.bg }
+                : { backgroundColor: block.bg })
+            : {}),
+        }}
       >
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
           <button {...attributes} {...listeners} className="text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
