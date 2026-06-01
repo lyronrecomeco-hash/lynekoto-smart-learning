@@ -57,6 +57,16 @@ function Present() {
   });
 
   const questions = useMemo(() => normalize((activity?.questions as any[]) ?? []), [activity]);
+  const settings: any = (activity as any)?.settings ?? {};
+  const layoutClass =
+    settings.layout === "cards" ? "present-layout-cards" :
+    settings.layout === "list" ? "present-layout-list" :
+    settings.layout === "compact" ? "present-layout-compact" : "";
+  const projBgStyle: React.CSSProperties = settings.background
+    ? (String(settings.background).startsWith("linear-") || String(settings.background).startsWith("radial-")
+        ? { backgroundImage: settings.background }
+        : { backgroundColor: settings.background })
+    : {};
 
   // keyboard nav
   useEffect(() => {
@@ -145,7 +155,10 @@ function Present() {
         </div>
       </header>
 
-      <main className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-12" style={cardBg}>
+      <main
+        className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-12"
+        style={{ ...projBgStyle, ...cardBg }}
+      >
         <div className="w-full max-w-5xl">
           <div className="text-center">
             <div className="font-display text-[11px] uppercase tracking-widest text-muted-foreground">
@@ -164,7 +177,8 @@ function Present() {
           )}
 
           {options.length > 0 && q.type !== "ordering" && (
-            <div className="mt-10 grid gap-3 md:grid-cols-2">
+            <div className={`mt-10 grid gap-3 md:grid-cols-2 ${layoutClass}`}>
+
               {options.map((opt, i) => {
                 const isRight = correctSet.has(i);
                 const hasAnswer = correctSet.size > 0;
