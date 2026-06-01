@@ -101,7 +101,7 @@ function CanvasEditor() {
       const raw = (project.questions as any[]) ?? [];
       const normalized: Block[] = raw.map((b: any) =>
         b?.type ? b : {
-          id: crypto.randomUUID(),
+          id: genId(),
           type: "mcq",
           data: { question: b.question, options: b.options, correct_index: b.correct_index, explanation: b.explanation },
           points: 10, time_limit: 30,
@@ -130,7 +130,7 @@ function CanvasEditor() {
   // ===== Mutations =====
   const addBlock = (type: BlockType, atIndex?: number) => {
     const block: Block = {
-      id: crypto.randomUUID(),
+      id: genId(),
       type,
       data: BLOCK_DEFS[type].make(),
       points: type === "mcq" || type === "tf" || type === "short" ? 10 : undefined,
@@ -157,7 +157,7 @@ function CanvasEditor() {
       const idx = prev.findIndex((b) => b.id === bid);
       if (idx === -1) return prev;
       const copy = [...prev];
-      const dup = { ...prev[idx], id: crypto.randomUUID(), data: structuredClone(prev[idx].data) };
+      const dup = { ...prev[idx], id: genId(), data: structuredClone(prev[idx].data) };
       copy.splice(idx + 1, 0, dup);
       return copy;
     });
