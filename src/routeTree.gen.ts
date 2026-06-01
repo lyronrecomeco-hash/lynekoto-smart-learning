@@ -23,6 +23,7 @@ import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAchievementsRouteImport } from './routes/_authenticated/achievements'
 import { Route as AuthenticatedStudioIdRouteImport } from './routes/_authenticated/studio.$id'
+import { Route as AuthenticatedStudentsCardsRouteImport } from './routes/_authenticated/students.cards'
 import { Route as AuthenticatedPresentIdRouteImport } from './routes/_authenticated/present.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -95,6 +96,12 @@ const AuthenticatedStudioIdRoute = AuthenticatedStudioIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedStudioRoute,
 } as any)
+const AuthenticatedStudentsCardsRoute =
+  AuthenticatedStudentsCardsRouteImport.update({
+    id: '/cards',
+    path: '/cards',
+    getParentRoute: () => AuthenticatedStudentsRoute,
+  } as any)
 const AuthenticatedPresentIdRoute = AuthenticatedPresentIdRouteImport.update({
   id: '/present/$id',
   path: '/present/$id',
@@ -112,9 +119,10 @@ export interface FileRoutesByFullPath {
   '/library': typeof AuthenticatedLibraryRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/students': typeof AuthenticatedStudentsRoute
+  '/students': typeof AuthenticatedStudentsRouteWithChildren
   '/studio': typeof AuthenticatedStudioRouteWithChildren
   '/present/$id': typeof AuthenticatedPresentIdRoute
+  '/students/cards': typeof AuthenticatedStudentsCardsRoute
   '/studio/$id': typeof AuthenticatedStudioIdRoute
 }
 export interface FileRoutesByTo {
@@ -128,9 +136,10 @@ export interface FileRoutesByTo {
   '/library': typeof AuthenticatedLibraryRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/students': typeof AuthenticatedStudentsRoute
+  '/students': typeof AuthenticatedStudentsRouteWithChildren
   '/studio': typeof AuthenticatedStudioRouteWithChildren
   '/present/$id': typeof AuthenticatedPresentIdRoute
+  '/students/cards': typeof AuthenticatedStudentsCardsRoute
   '/studio/$id': typeof AuthenticatedStudioIdRoute
 }
 export interface FileRoutesById {
@@ -146,9 +155,10 @@ export interface FileRoutesById {
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/scan': typeof AuthenticatedScanRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
-  '/_authenticated/students': typeof AuthenticatedStudentsRoute
+  '/_authenticated/students': typeof AuthenticatedStudentsRouteWithChildren
   '/_authenticated/studio': typeof AuthenticatedStudioRouteWithChildren
   '/_authenticated/present/$id': typeof AuthenticatedPresentIdRoute
+  '/_authenticated/students/cards': typeof AuthenticatedStudentsCardsRoute
   '/_authenticated/studio/$id': typeof AuthenticatedStudioIdRoute
 }
 export interface FileRouteTypes {
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/students'
     | '/studio'
     | '/present/$id'
+    | '/students/cards'
     | '/studio/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/students'
     | '/studio'
     | '/present/$id'
+    | '/students/cards'
     | '/studio/$id'
   id:
     | '__root__'
@@ -200,6 +212,7 @@ export interface FileRouteTypes {
     | '/_authenticated/students'
     | '/_authenticated/studio'
     | '/_authenticated/present/$id'
+    | '/_authenticated/students/cards'
     | '/_authenticated/studio/$id'
   fileRoutesById: FileRoutesById
 }
@@ -309,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioIdRouteImport
       parentRoute: typeof AuthenticatedStudioRoute
     }
+    '/_authenticated/students/cards': {
+      id: '/_authenticated/students/cards'
+      path: '/cards'
+      fullPath: '/students/cards'
+      preLoaderRoute: typeof AuthenticatedStudentsCardsRouteImport
+      parentRoute: typeof AuthenticatedStudentsRoute
+    }
     '/_authenticated/present/$id': {
       id: '/_authenticated/present/$id'
       path: '/present/$id'
@@ -318,6 +338,19 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedStudentsRouteChildren {
+  AuthenticatedStudentsCardsRoute: typeof AuthenticatedStudentsCardsRoute
+}
+
+const AuthenticatedStudentsRouteChildren: AuthenticatedStudentsRouteChildren = {
+  AuthenticatedStudentsCardsRoute: AuthenticatedStudentsCardsRoute,
+}
+
+const AuthenticatedStudentsRouteWithChildren =
+  AuthenticatedStudentsRoute._addFileChildren(
+    AuthenticatedStudentsRouteChildren,
+  )
 
 interface AuthenticatedStudioRouteChildren {
   AuthenticatedStudioIdRoute: typeof AuthenticatedStudioIdRoute
@@ -339,7 +372,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedScanRoute: typeof AuthenticatedScanRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRoute
+  AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRouteWithChildren
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRouteWithChildren
   AuthenticatedPresentIdRoute: typeof AuthenticatedPresentIdRoute
 }
@@ -353,7 +386,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedScanRoute: AuthenticatedScanRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedStudentsRoute: AuthenticatedStudentsRoute,
+  AuthenticatedStudentsRoute: AuthenticatedStudentsRouteWithChildren,
   AuthenticatedStudioRoute: AuthenticatedStudioRouteWithChildren,
   AuthenticatedPresentIdRoute: AuthenticatedPresentIdRoute,
 }
