@@ -62,7 +62,8 @@ interface Block {
   data: any;
   points?: number;
   time_limit?: number;
-  color?: string; // hex / oklch / css color for block accent
+  color?: string;   // accent stripe color
+  bg?: string;      // optional card background (color or gradient)
 }
 
 const BLOCK_DEFS: Record<BlockType, { label: string; icon: any; description: string; make: () => Block["data"] }> = {
