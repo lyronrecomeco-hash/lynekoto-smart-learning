@@ -325,7 +325,7 @@ function SaveIndicator({ status }: { status: string }) {
   return <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Save className="h-3 w-3" /> Sincronizado</span>;
 }
 
-function PaletteBlockButton({ type, def, onClick }: { type: BlockType; def: typeof BLOCK_DEFS[BlockType]; onClick: () => void }) {
+function PaletteBlockButton({ type, def, onClick }: { type: BlockType; def: (typeof BLOCK_DEFS)[BlockType]; onClick: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `palette:${type}` });
   const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.65 : 1, zIndex: isDragging ? 50 : undefined };
 
