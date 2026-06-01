@@ -26,6 +26,7 @@ export type Database = {
           is_public: boolean
           owner_id: string
           questions: Json
+          settings: Json
           status: string
           subject: string | null
           title: string
@@ -43,6 +44,7 @@ export type Database = {
           is_public?: boolean
           owner_id: string
           questions?: Json
+          settings?: Json
           status?: string
           subject?: string | null
           title: string
@@ -60,6 +62,7 @@ export type Database = {
           is_public?: boolean
           owner_id?: string
           questions?: Json
+          settings?: Json
           status?: string
           subject?: string | null
           title?: string

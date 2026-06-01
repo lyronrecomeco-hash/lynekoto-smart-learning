@@ -18,12 +18,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+// (toast import removed — not currently used)
 import {
   ArrowLeft, CheckCircle2, CircleDot, Type, Image as ImageIcon, Minus,
   ListChecks, MessageSquare, GripVertical, Plus, Trash2, Copy, Play,
   Loader2, Save, MoreVertical, Settings2, Palette, BarChart3,
-  ArrowDownUp, AlignLeft, PenLine, Quote,
+  ArrowDownUp, AlignLeft, PenLine, Quote, ChevronRight, ChevronLeft, Layers,
 } from "lucide-react";
 import { useAutosave } from "@/hooks/use-autosave";
 
@@ -55,7 +55,7 @@ function genId() {
 }
 
 // ============ Block types ============
-type BlockType = "mcq" | "tf" | "multi" | "short" | "long" | "ordering" | "poll" | "text" | "quote" | "divider" | "media";
+type BlockType = "mcq" | "tf" | "multi" | "short" | "long" | "ordering" | "poll" | "text" | "quote" | "divider" | "media" | "step";
 interface Block {
   id: string;
   type: BlockType;
@@ -77,6 +77,7 @@ const BLOCK_DEFS: Record<BlockType, { label: string; icon: any; description: str
   quote:    { label: "Destaque",         icon: Quote,        description: "Citação ou aviso",           make: () => ({ content: "", author: "" }) },
   media:    { label: "Mídia",            icon: ImageIcon,    description: "Imagem por URL",             make: () => ({ url: "", caption: "" }) },
   divider:  { label: "Seção",            icon: Minus,        description: "Separador",                   make: () => ({ label: "Nova seção" }) },
+  step:     { label: "Próximo (etapa)",  icon: ChevronRight, description: "Quebra de página: avança",    make: () => ({ label: "Próximo" }) },
 };
 
 const BLOCK_COLORS = [
@@ -89,6 +90,40 @@ const BLOCK_COLORS = [
   { label: "Musgo",    value: "oklch(0.5 0.07 145)" },
   { label: "Terracota", value: "oklch(0.6 0.13 40)" },
 ];
+
+// ============ Project-level Settings ============
+type LayoutStyle = "stack" | "cards" | "list" | "compact";
+interface CanvasSettings {
+  layout: LayoutStyle;
+  background: string;          // CSS color or gradient
+  accent: string;              // CSS color
+  contentWidth: "narrow" | "comfortable" | "wide";
+  stepMode: boolean;           // when true: only render one step at a time in canvas
+}
+const DEFAULT_SETTINGS: CanvasSettings = {
+  layout: "stack",
+  background: "",
+  accent: "",
+  contentWidth: "comfortable",
+  stepMode: false,
+};
+const LAYOUT_PRESETS: { value: LayoutStyle; label: string; description: string }[] = [
+  { value: "stack",   label: "Padrão",  description: "Cards com borda — visual clássico" },
+  { value: "cards",   label: "Cards",   description: "Cartões elevados com sombra" },
+  { value: "list",    label: "Lista",   description: "Itens em lista enxuta" },
+  { value: "compact", label: "Compacto", description: "Espaçamento reduzido para muitas perguntas" },
+];
+const BACKGROUND_PRESETS = [
+  { label: "Padrão (pontos)", value: "" },
+  { label: "Branco",          value: "#ffffff" },
+  { label: "Cinza",           value: "oklch(0.97 0.005 260)" },
+  { label: "Marinho",         value: "oklch(0.22 0.04 260)" },
+  { label: "Grafite",         value: "oklch(0.18 0.01 250)" },
+  { label: "Creme",           value: "oklch(0.97 0.02 80)" },
+  { label: "Indigo suave",    value: "linear-gradient(135deg, oklch(0.96 0.03 268), oklch(0.93 0.05 280))" },
+  { label: "Aurora",          value: "linear-gradient(135deg, oklch(0.95 0.05 200), oklch(0.93 0.06 320))" },
+];
+
 
 // ============ Component ============
 function CanvasEditor() {
@@ -109,8 +144,10 @@ function CanvasEditor() {
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState<string>("draft");
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [settings, setSettings] = useState<CanvasSettings>(DEFAULT_SETTINGS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
     if (project && !hydrated) {
@@ -127,24 +164,28 @@ function CanvasEditor() {
       );
       setBlocks(normalized);
       setSelectedId(normalized[0]?.id ?? null);
+      const s = (project as any).settings ?? {};
+      setSettings({ ...DEFAULT_SETTINGS, ...s });
       setHydrated(true);
     }
   }, [project, hydrated]);
 
   const saveStatus = useAutosave(
-    useMemo(() => ({ title, status, blocks }), [title, status, blocks]),
+    useMemo(() => ({ title, status, blocks, settings }), [title, status, blocks, settings]),
     async (v) => {
       if (!hydrated) return;
       const { error } = await supabase.from("activities").update({
         title: v.title || "Sem título",
         status: v.status,
         questions: v.blocks as any,
+        settings: v.settings as any,
       } as any).eq("id", id);
       if (error) throw error;
     },
   );
 
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
+
 
   // ===== Mutations =====
   const createBlock = (type: BlockType): Block => ({
@@ -229,15 +270,48 @@ function CanvasEditor() {
 
   if (isLoading || !project) {
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center bg-canvas">
+      <div className="flex h-screen items-center justify-center bg-canvas">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
 
+  // Split blocks into "steps" using `step` blocks as page-breaks.
+  const stepGroups: Block[][] = (() => {
+    const groups: Block[][] = [[]];
+    for (const b of blocks) {
+      if (b.type === "step") {
+        groups.push([]);
+      } else {
+        groups[groups.length - 1].push(b);
+      }
+    }
+    return groups;
+  })();
+  const totalSteps = stepGroups.length;
+  const safeStep = Math.min(currentStep, totalSteps - 1);
+  const visibleBlocks = settings.stepMode ? (stepGroups[safeStep] ?? []) : blocks;
+
+  const widthClass =
+    settings.contentWidth === "narrow" ? "max-w-2xl" :
+    settings.contentWidth === "wide" ? "max-w-5xl" : "max-w-3xl";
+  const layoutClass =
+    settings.layout === "cards" ? "canvas-layout-cards" :
+    settings.layout === "list" ? "canvas-layout-list" :
+    settings.layout === "compact" ? "canvas-layout-compact" : "";
+
+  const canvasBgStyle: React.CSSProperties = settings.background
+    ? (settings.background.startsWith("linear-") || settings.background.startsWith("radial-")
+        ? { backgroundImage: settings.background }
+        : { backgroundColor: settings.background })
+    : {};
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-    <div className="flex flex-col bg-canvas h-[calc(100vh-3.5rem)]">
+    <div
+      className="flex flex-col bg-canvas h-screen"
+      style={settings.accent ? ({ ["--primary" as any]: settings.accent } as React.CSSProperties) : undefined}
+    >
       {/* Top toolbar */}
       <header className="flex h-12 flex-shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
         <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5">
@@ -252,6 +326,21 @@ function CanvasEditor() {
         />
         <SaveIndicator status={saveStatus} />
         <div className="ml-auto flex items-center gap-2">
+          {settings.stepMode && totalSteps > 1 && (
+            <div className="flex items-center gap-1 rounded-md border border-border bg-background px-1 h-8">
+              <Button variant="ghost" size="icon" className="h-6 w-6"
+                onClick={() => setCurrentStep((s) => Math.max(0, s - 1))} disabled={safeStep === 0}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-xs font-mono px-1 tabular-nums">
+                Etapa {safeStep + 1} / {totalSteps}
+              </span>
+              <Button variant="ghost" size="icon" className="h-6 w-6"
+                onClick={() => setCurrentStep((s) => Math.min(totalSteps - 1, s + 1))} disabled={safeStep === totalSteps - 1}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -268,7 +357,7 @@ function CanvasEditor() {
 
       <div className="flex flex-1 min-h-0">
         {/* Left: Palette */}
-        <aside className="w-60 flex-shrink-0 border-r border-border bg-surface overflow-y-auto">
+        <aside className="w-60 flex-shrink-0 border-r border-border bg-surface overflow-y-auto scroll-clean">
           <div className="p-4">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Blocos</div>
             <div className="space-y-1">
@@ -288,29 +377,42 @@ function CanvasEditor() {
         </aside>
 
         {/* Center: Canvas */}
-        <div className="flex-1 overflow-y-auto bg-dots" onClick={() => setSelectedId(null)}>
-          <div className="mx-auto max-w-3xl py-10 px-6">
-            {blocks.length === 0 ? (
+        <div
+          className={`flex-1 overflow-y-auto scroll-clean ${settings.background ? "" : "bg-dots"}`}
+          style={canvasBgStyle}
+          onClick={() => setSelectedId(null)}
+        >
+          <div className={`mx-auto ${widthClass} py-10 px-6`}>
+            {settings.stepMode && totalSteps > 1 && (
+              <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+                <Layers className="h-3.5 w-3.5" />
+                Visualizando etapa {safeStep + 1} de {totalSteps}
+              </div>
+            )}
+            {visibleBlocks.length === 0 ? (
               <CanvasDropZone>
                 <EmptyCanvas onAdd={addBlock} />
               </CanvasDropZone>
             ) : (
               <CanvasDropZone>
-                <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-3">
-                    {blocks.map((b, i) => (
-                      <SortableBlock
-                        key={b.id}
-                        block={b}
-                        index={i}
-                        selected={selectedId === b.id}
-                        onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
-                        onUpdate={(d) => updateBlock(b.id, { data: d })}
-                        onRemove={() => removeBlock(b.id)}
-                        onDuplicate={() => duplicateBlock(b.id)}
-                        onInsertAfter={(t) => addBlock(t, i + 1)}
-                      />
-                    ))}
+                <SortableContext items={visibleBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                  <div className={`space-y-3 ${layoutClass}`}>
+                    {visibleBlocks.map((b) => {
+                      const i = blocks.findIndex((x) => x.id === b.id);
+                      return (
+                        <SortableBlock
+                          key={b.id}
+                          block={b}
+                          index={i}
+                          selected={selectedId === b.id}
+                          onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
+                          onUpdate={(d) => updateBlock(b.id, { data: d })}
+                          onRemove={() => removeBlock(b.id)}
+                          onDuplicate={() => duplicateBlock(b.id)}
+                          onInsertAfter={(t) => addBlock(t, i + 1)}
+                        />
+                      );
+                    })}
                   </div>
                 </SortableContext>
               </CanvasDropZone>
@@ -319,12 +421,12 @@ function CanvasEditor() {
         </div>
 
         {/* Right: Inspector */}
-        <aside className="w-80 flex-shrink-0 border-l border-border bg-surface overflow-y-auto">
+        <aside className="w-80 flex-shrink-0 border-l border-border bg-surface overflow-y-auto scroll-clean">
           <Inspector
             selected={selected}
             onUpdate={(patch) => selected && updateBlock(selected.id, patch as any)}
-            projectId={id}
-            onBlocksGenerated={(newBlocks) => setBlocks((prev) => [...prev, ...newBlocks])}
+            settings={settings}
+            onSettingsChange={(patch) => setSettings((s) => ({ ...s, ...patch }))}
             project={project}
           />
         </aside>
@@ -333,6 +435,7 @@ function CanvasEditor() {
     </DndContext>
   );
 }
+
 
 // ============ Save indicator ============
 function SaveIndicator({ status }: { status: string }) {
@@ -428,7 +531,7 @@ function InsertBetween({ onAdd }: { onAdd: (t: BlockType) => void }) {
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-center">
         {open ? (
           <div className="flex items-center gap-1 rounded-full border border-border bg-surface shadow-soft p-1 z-10">
-            {(["mcq", "tf", "multi", "short", "ordering", "poll", "text", "media", "divider"] as BlockType[]).map((t) => {
+            {(["mcq", "tf", "multi", "short", "ordering", "poll", "text", "media", "divider", "step"] as BlockType[]).map((t) => {
               const D = BLOCK_DEFS[t];
               return (
                 <button key={t} onClick={() => { onAdd(t); setOpen(false); }} title={D.label}
@@ -462,8 +565,30 @@ function BlockEditor({ block, onUpdate }: { block: Block; onUpdate: (d: any) => 
     case "quote":    return <QuoteEditor data={block.data} onUpdate={onUpdate} />;
     case "media":    return <MediaEditor data={block.data} onUpdate={onUpdate} />;
     case "divider":  return <DividerEditor data={block.data} onUpdate={onUpdate} />;
+    case "step":     return <StepEditor data={block.data} onUpdate={onUpdate} />;
     default: return null;
   }
+}
+
+function StepEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <ChevronRight className="h-4 w-4" />
+      </div>
+      <div className="flex-1">
+        <Input
+          value={data.label ?? "Próximo"}
+          onChange={(e) => onUpdate({ label: e.target.value })}
+          placeholder="Próximo"
+          className="border-0 bg-transparent font-display font-semibold focus-visible:bg-muted/30 px-2"
+        />
+        <p className="text-[11px] text-muted-foreground px-2 mt-0.5">
+          Quebra de etapa — divide o quiz em páginas. Ative "Etapas" em Estilo.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function MultiEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
@@ -652,12 +777,12 @@ function EmptyCanvas({ onAdd }: { onAdd: (t: BlockType) => void }) {
 
 // ============ Inspector (Bloco / Estilo / Projeto) ============
 function Inspector({
-  selected, onUpdate, projectId: _projectId, onBlocksGenerated: _onBlocksGenerated, project,
+  selected, onUpdate, settings, onSettingsChange, project,
 }: {
   selected: Block | null;
   onUpdate: (patch: Partial<Block>) => void;
-  projectId: string;
-  onBlocksGenerated: (b: Block[]) => void;
+  settings: CanvasSettings;
+  onSettingsChange: (patch: Partial<CanvasSettings>) => void;
   project: any;
 }) {
   return (
@@ -668,7 +793,7 @@ function Inspector({
         <TabsTrigger value="project">Projeto</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="block" className="px-4 pb-4 flex-1 overflow-y-auto">
+      <TabsContent value="block" className="px-4 pb-4 flex-1 overflow-y-auto scroll-clean">
         {!selected ? (
           <div className="text-center py-12 text-sm text-muted-foreground">
             <MoreVertical className="mx-auto h-8 w-8 opacity-30 mb-3" />
@@ -704,18 +829,6 @@ function Inspector({
                 </div>
               </>
             )}
-          </div>
-        )}
-      </TabsContent>
-
-      <TabsContent value="style" className="px-4 pb-4 flex-1 overflow-y-auto">
-        {!selected ? (
-          <div className="text-center py-12 text-sm text-muted-foreground">
-            <Palette className="mx-auto h-8 w-8 opacity-30 mb-3" />
-            Selecione um bloco para personalizar a cor.
-          </div>
-        ) : (
-          <div className="space-y-4">
             <div>
               <Label className="text-xs mb-2 block">Cor de destaque</Label>
               <div className="grid grid-cols-4 gap-2">
@@ -734,24 +847,128 @@ function Inspector({
                   );
                 })}
               </div>
-            </div>
-            <div>
-              <Label className="text-xs">Cor personalizada (hex)</Label>
               <Input
                 type="color"
                 value={selected.color?.startsWith("#") ? selected.color : "#4f46e5"}
                 onChange={(e) => onUpdate({ color: e.target.value })}
-                className="h-10 mt-1 cursor-pointer"
+                className="h-9 mt-2 cursor-pointer"
               />
             </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              A cor aparece como faixa lateral no editor e como destaque do bloco na apresentação.
-            </p>
           </div>
         )}
       </TabsContent>
 
-      <TabsContent value="project" className="px-4 pb-4 flex-1 overflow-y-auto">
+      <TabsContent value="style" className="px-4 pb-4 flex-1 overflow-y-auto scroll-clean">
+        <div className="space-y-5">
+          <div>
+            <Label className="text-xs mb-2 block">Estilo do quiz</Label>
+            <div className="grid gap-2">
+              {LAYOUT_PRESETS.map((p) => {
+                const active = settings.layout === p.value;
+                return (
+                  <button
+                    key={p.value}
+                    onClick={() => onSettingsChange({ layout: p.value })}
+                    className={`text-left rounded-lg border-2 px-3 py-2 transition-smooth ${active ? "border-primary bg-primary/5" : "border-border hover:border-strong"}`}
+                  >
+                    <div className="text-sm font-medium">{p.label}</div>
+                    <div className="text-[11px] text-muted-foreground">{p.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs mb-2 block">Modo de etapas</Label>
+            <button
+              onClick={() => onSettingsChange({ stepMode: !settings.stepMode })}
+              className={`w-full rounded-lg border-2 px-3 py-2 text-left transition-smooth ${settings.stepMode ? "border-primary bg-primary/5" : "border-border hover:border-strong"}`}
+            >
+              <div className="text-sm font-medium flex items-center gap-2">
+                <Layers className="h-3.5 w-3.5" />
+                {settings.stepMode ? "Etapas ativadas" : "Etapas desativadas"}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                Use o bloco "Próximo" para dividir o quiz em páginas. O canvas mostra uma etapa por vez.
+              </div>
+            </button>
+          </div>
+
+          <div>
+            <Label className="text-xs mb-2 block">Largura do conteúdo</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["narrow", "comfortable", "wide"] as const).map((w) => (
+                <button
+                  key={w}
+                  onClick={() => onSettingsChange({ contentWidth: w })}
+                  className={`rounded-md border-2 py-2 text-xs font-medium capitalize ${settings.contentWidth === w ? "border-primary bg-primary/5" : "border-border"}`}
+                >
+                  {w === "narrow" ? "Estreita" : w === "wide" ? "Larga" : "Padrão"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs mb-2 block">Fundo do canvas</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {BACKGROUND_PRESETS.map((bg) => {
+                const active = settings.background === bg.value;
+                const isGradient = bg.value.startsWith("linear-") || bg.value.startsWith("radial-");
+                return (
+                  <button
+                    key={bg.label}
+                    onClick={() => onSettingsChange({ background: bg.value })}
+                    title={bg.label}
+                    className={`aspect-square rounded-lg border-2 transition-smooth relative overflow-hidden ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-strong"}`}
+                    style={isGradient ? { backgroundImage: bg.value } : { backgroundColor: bg.value || "transparent" }}
+                  >
+                    {!bg.value && <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">auto</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 grid grid-cols-[1fr_auto] gap-2 items-center">
+              <Input
+                value={settings.background}
+                onChange={(e) => onSettingsChange({ background: e.target.value })}
+                placeholder="cor ou linear-gradient(...)"
+                className="h-9 text-xs"
+              />
+              <Input
+                type="color"
+                value={settings.background.startsWith("#") ? settings.background : "#ffffff"}
+                onChange={(e) => onSettingsChange({ background: e.target.value })}
+                className="h-9 w-12 cursor-pointer p-1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs mb-2 block">Cor de destaque (acento)</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {BLOCK_COLORS.map((c) => {
+                const active = (settings.accent ?? "") === c.value;
+                return (
+                  <button
+                    key={c.label}
+                    onClick={() => onSettingsChange({ accent: c.value })}
+                    title={c.label}
+                    className={`aspect-square rounded-lg border-2 transition-smooth ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-strong"}`}
+                    style={{ background: c.value || "var(--muted)" }}
+                  >
+                    {!c.value && <span className="block text-[10px] text-muted-foreground">auto</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </TabsContent>
+
+
+      <TabsContent value="project" className="px-4 pb-4 flex-1 overflow-y-auto scroll-clean">
         <div className="space-y-3 text-sm">
           <Row label="Matéria" value={project.subject ?? "—"} />
           <Row label="Série" value={project.grade ?? "—"} />
