@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent,
@@ -349,7 +349,7 @@ function PaletteBlockButton({ type, def, onClick }: { type: BlockType; def: type
   );
 }
 
-function CanvasDropZone({ children }: { children: React.ReactNode }) {
+function CanvasDropZone({ children }: { children: ReactNode }) {
   const { isOver, setNodeRef } = useDroppable({ id: "canvas-dropzone" });
   return (
     <div ref={setNodeRef} className={`min-h-[32rem] rounded-2xl border border-dashed p-3 transition-smooth ${isOver ? "border-primary bg-primary/5" : "border-transparent"}`}>
