@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useAutosave } from "@/hooks/use-autosave";
 import { generateBlocks } from "@/lib/activities.functions";
-import { useTheme } from "@/hooks/use-theme";
+
 
 export const Route = createFileRoute("/_authenticated/studio/$id")({
   head: () => ({ meta: [{ title: "Canvas — LyneKoto" }] }),
