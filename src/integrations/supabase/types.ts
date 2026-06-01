@@ -19,12 +19,14 @@ export type Database = {
           activity_type: string
           cover_color: string | null
           created_at: string
+          description: string | null
           difficulty: string | null
           grade: string | null
           id: string
           is_public: boolean
           owner_id: string
           questions: Json
+          status: string
           subject: string | null
           title: string
           topic: string | null
@@ -34,12 +36,14 @@ export type Database = {
           activity_type?: string
           cover_color?: string | null
           created_at?: string
+          description?: string | null
           difficulty?: string | null
           grade?: string | null
           id?: string
           is_public?: boolean
           owner_id: string
           questions?: Json
+          status?: string
           subject?: string | null
           title: string
           topic?: string | null
@@ -49,12 +53,14 @@ export type Database = {
           activity_type?: string
           cover_color?: string | null
           created_at?: string
+          description?: string | null
           difficulty?: string | null
           grade?: string | null
           id?: string
           is_public?: boolean
           owner_id?: string
           questions?: Json
+          status?: string
           subject?: string | null
           title?: string
           topic?: string | null
