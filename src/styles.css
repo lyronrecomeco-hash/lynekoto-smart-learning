@@ -239,16 +239,39 @@
     background-color: oklch(from var(--foreground) l c h / 0.32);
   }
 
-  /* Canvas layout style helpers */
-  .canvas-layout-cards > * {
-    background: var(--surface);
-    border-radius: var(--radius-2xl);
-    box-shadow: var(--shadow-soft);
+  /* Canvas layout style helpers — each produces a visible visual effect */
+  .canvas-layout-stack > * { transition: all .2s ease; }
+
+  .canvas-layout-cards { gap: 1.25rem; display: flex; flex-direction: column; }
+  .canvas-layout-cards > * > div:first-child {
+    border-radius: var(--radius-2xl) !important;
+    box-shadow: 0 10px 30px -12px oklch(from var(--foreground) l c h / 0.18);
+    border-width: 1px !important;
   }
-  .canvas-layout-list > * {
-    border-radius: var(--radius-md);
+
+  .canvas-layout-list { gap: 0; display: flex; flex-direction: column; }
+  .canvas-layout-list > * > div:first-child {
+    border-radius: 0 !important;
+    border-width: 0 0 1px 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
   }
-  .canvas-layout-compact > * + * { margin-top: 0.25rem; }
+
+  .canvas-layout-compact { gap: .35rem; display: flex; flex-direction: column; }
+  .canvas-layout-compact > * > div:first-child > div:last-child { padding: .65rem 1rem !important; }
+  .canvas-layout-compact > * > div:first-child > div:first-child { padding: .35rem .75rem !important; }
+
+  /* Step group — visually "shrinks" inactive groups when stepMode is off,
+     making the page breaks obvious in the editor. */
+  .step-group-collapsed > * > div:first-child {
+    opacity: .45;
+    transform: scale(.985);
+    transform-origin: top center;
+    filter: saturate(.75);
+  }
+  .step-group-active > * > div:first-child {
+    box-shadow: 0 0 0 2px oklch(from var(--primary) l c h / 0.12);
+  }
 }
 
 @keyframes fade-up {

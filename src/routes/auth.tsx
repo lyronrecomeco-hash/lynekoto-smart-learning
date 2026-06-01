@@ -97,13 +97,13 @@ function AuthPage() {
           <div className="space-y-8">
             <div className="animate-fade-up">
               <h2 className="font-display text-4xl font-bold leading-[1.1] xl:text-5xl">
-                A sala de aula que <span className="text-white/70">pensa</span>,{" "}
-                <span className="text-white/70">mede</span> e{" "}
-                <span className="text-white/70">evolui</span> em tempo real.
+                Ensine com <span className="text-white/70">clareza</span>,{" "}
+                avalie com <span className="text-white/70">precisão</span>,{" "}
+                evolua com <span className="text-white/70">dados</span>.
               </h2>
               <p className="mt-5 max-w-md text-white/70 leading-relaxed">
-                IA pedagógica, QR Cards inteligentes e analytics avançado — em uma única
-                experiência integrada.
+                Construa quizzes interativos, colete respostas por QR em segundos e
+                acompanhe o progresso de cada turma em um só lugar.
               </p>
             </div>
 
@@ -202,11 +202,6 @@ function AuthPage() {
             </Button>
           </form>
 
-          <div className="mt-6 rounded-lg border-2 border-dashed border-border-strong bg-surface/60 p-3 text-center">
-            <p className="text-[11px] font-mono text-muted-foreground">
-              Acesso de demonstração: <span className="font-semibold text-foreground">admin@painel.com</span> / <span className="font-semibold text-foreground">admin1</span>
-            </p>
-          </div>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
             Acesso exclusivo para educadores e instituições parceiras.

@@ -62,7 +62,8 @@ interface Block {
   data: any;
   points?: number;
   time_limit?: number;
-  color?: string; // hex / oklch / css color for block accent
+  color?: string;   // accent stripe color
+  bg?: string;      // optional card background (color or gradient)
 }
 
 const BLOCK_DEFS: Record<BlockType, { label: string; icon: any; description: string; make: () => Block["data"] }> = {
@@ -205,6 +206,7 @@ function CanvasEditor() {
       return copy;
     });
     setSelectedId(block.id);
+    if (type === "step") setSettings((s) => (s.stepMode ? s : { ...s, stepMode: true }));
   };
 
   const updateBlock = (bid: string, patch: Partial<Block> | { data: any }) => {
@@ -243,6 +245,7 @@ function CanvasEditor() {
         return copy;
       });
       setSelectedId(block.id);
+      if (type === "step") setSettings((s) => (s.stepMode ? s : { ...s, stepMode: true }));
       return;
     }
     if (!over || active.id === over.id) return;
@@ -396,24 +399,82 @@ function CanvasEditor() {
             ) : (
               <CanvasDropZone>
                 <SortableContext items={visibleBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-                  <div className={`space-y-3 ${layoutClass}`}>
-                    {visibleBlocks.map((b) => {
-                      const i = blocks.findIndex((x) => x.id === b.id);
-                      return (
-                        <SortableBlock
-                          key={b.id}
-                          block={b}
-                          index={i}
-                          selected={selectedId === b.id}
-                          onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
-                          onUpdate={(d) => updateBlock(b.id, { data: d })}
-                          onRemove={() => removeBlock(b.id)}
-                          onDuplicate={() => duplicateBlock(b.id)}
-                          onInsertAfter={(t) => addBlock(t, i + 1)}
-                        />
-                      );
-                    })}
-                  </div>
+                  {settings.stepMode ? (
+                    <div className={`step-group-active space-y-3 ${layoutClass}`}>
+                      {visibleBlocks.map((b) => {
+                        const i = blocks.findIndex((x) => x.id === b.id);
+                        return (
+                          <SortableBlock
+                            key={b.id} block={b} index={i}
+                            selected={selectedId === b.id}
+                            onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
+                            onUpdate={(d) => updateBlock(b.id, { data: d })}
+                            onRemove={() => removeBlock(b.id)}
+                            onDuplicate={() => duplicateBlock(b.id)}
+                            onInsertAfter={(t) => addBlock(t, i + 1)}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Render in step groups so the "Próximo" block visibly shortens / separates the previous group. */
+                    <div className="space-y-2">
+                      {(() => {
+                        const out: ReactNode[] = [];
+                        let groupIdx = 0;
+                        let buffer: Block[] = [];
+                        const flush = () => {
+                          if (buffer.length === 0) return;
+                          const items = [...buffer];
+                          out.push(
+                            <div key={`g-${groupIdx}`} className={`space-y-3 ${layoutClass} ${groupIdx > 0 ? "step-group-collapsed" : ""}`}>
+                              {items.map((b) => {
+                                const i = blocks.findIndex((x) => x.id === b.id);
+                                return (
+                                  <SortableBlock
+                                    key={b.id} block={b} index={i}
+                                    selected={selectedId === b.id}
+                                    onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
+                                    onUpdate={(d) => updateBlock(b.id, { data: d })}
+                                    onRemove={() => removeBlock(b.id)}
+                                    onDuplicate={() => duplicateBlock(b.id)}
+                                    onInsertAfter={(t) => addBlock(t, i + 1)}
+                                  />
+                                );
+                              })}
+                            </div>
+                          );
+                          buffer = [];
+                          groupIdx += 1;
+                        };
+                        blocks.forEach((b) => {
+                          if (b.type === "step") {
+                            flush();
+                            const i = blocks.findIndex((x) => x.id === b.id);
+                            out.push(
+                              <div key={b.id} className="flex items-center gap-3 my-3">
+                                <div className="h-px flex-1 bg-border-strong" />
+                                <SortableBlock
+                                  block={b} index={i}
+                                  selected={selectedId === b.id}
+                                  onSelect={(e) => { e.stopPropagation(); setSelectedId(b.id); }}
+                                  onUpdate={(d) => updateBlock(b.id, { data: d })}
+                                  onRemove={() => removeBlock(b.id)}
+                                  onDuplicate={() => duplicateBlock(b.id)}
+                                  onInsertAfter={(t) => addBlock(t, i + 1)}
+                                />
+                                <div className="h-px flex-1 bg-border-strong" />
+                              </div>
+                            );
+                          } else {
+                            buffer.push(b);
+                          }
+                        });
+                        flush();
+                        return out;
+                      })()}
+                    </div>
+                  )}
                 </SortableContext>
               </CanvasDropZone>
             )}
@@ -498,7 +559,14 @@ function SortableBlock({
         className={`rounded-xl border-2 bg-surface transition-smooth cursor-pointer overflow-hidden ${
           selected ? "border-primary shadow-soft" : "border-border hover:border-strong"
         }`}
-        style={block.color ? { borderLeftWidth: 5, borderLeftColor: block.color } : undefined}
+        style={{
+          ...(block.color ? { borderLeftWidth: 5, borderLeftColor: block.color } : {}),
+          ...(block.bg
+            ? (block.bg.startsWith("linear-") || block.bg.startsWith("radial-")
+                ? { backgroundImage: block.bg }
+                : { backgroundColor: block.bg })
+            : {}),
+        }}
       >
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
           <button {...attributes} {...listeners} className="text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
@@ -853,6 +921,48 @@ function Inspector({
                 onChange={(e) => onUpdate({ color: e.target.value })}
                 className="h-9 mt-2 cursor-pointer"
               />
+            </div>
+            <div>
+              <Label className="text-xs mb-2 block">Fundo do card</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: "auto", value: "" },
+                  { label: "Branco", value: "#ffffff" },
+                  { label: "Creme", value: "oklch(0.97 0.02 80)" },
+                  { label: "Cinza", value: "oklch(0.96 0.005 260)" },
+                  { label: "Indigo", value: "oklch(0.96 0.03 268)" },
+                  { label: "Esmer.", value: "oklch(0.95 0.05 158)" },
+                  { label: "Âmbar", value: "oklch(0.96 0.05 80)" },
+                  { label: "Carm.", value: "oklch(0.95 0.05 25)" },
+                ].map((c) => {
+                  const active = (selected.bg ?? "") === c.value;
+                  return (
+                    <button
+                      key={c.label}
+                      onClick={() => onUpdate({ bg: c.value } as any)}
+                      title={c.label}
+                      className={`relative aspect-square rounded-lg border-2 transition-smooth ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-strong"}`}
+                      style={{ background: c.value || "var(--muted)" }}
+                    >
+                      {!c.value && <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">auto</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 grid grid-cols-[1fr_auto] gap-2 items-center">
+                <Input
+                  value={selected.bg ?? ""}
+                  onChange={(e) => onUpdate({ bg: e.target.value } as any)}
+                  placeholder="cor ou linear-gradient(...)"
+                  className="h-9 text-xs"
+                />
+                <Input
+                  type="color"
+                  value={selected.bg?.startsWith("#") ? selected.bg : "#ffffff"}
+                  onChange={(e) => onUpdate({ bg: e.target.value } as any)}
+                  className="h-9 w-12 cursor-pointer p-1"
+                />
+              </div>
             </div>
           </div>
         )}
