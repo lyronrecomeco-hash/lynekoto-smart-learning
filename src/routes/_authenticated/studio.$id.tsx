@@ -1105,3 +1105,47 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+/* Tiny SVG-like wireframe showing how each quiz style lays out. */
+function LayoutPreview({ kind }: { kind: LayoutStyle }) {
+  const Box = ({ className = "", style = {} }: { className?: string; style?: React.CSSProperties }) => (
+    <div className={`bg-muted-foreground/30 ${className}`} style={style} />
+  );
+  if (kind === "cards") {
+    return (
+      <div className="h-14 rounded-md bg-muted/40 p-1.5 flex flex-col gap-1.5">
+        <Box className="h-4 rounded-md shadow-sm bg-muted-foreground/40" />
+        <Box className="h-4 rounded-md shadow-sm bg-muted-foreground/40" />
+      </div>
+    );
+  }
+  if (kind === "list") {
+    return (
+      <div className="h-14 rounded-md bg-muted/40 p-1.5 flex flex-col">
+        <Box className="h-3 border-b border-muted-foreground/40 bg-transparent" />
+        <Box className="h-3 border-b border-muted-foreground/40 bg-transparent" />
+        <Box className="h-3 border-b border-muted-foreground/40 bg-transparent" />
+        <Box className="h-3 bg-transparent" />
+      </div>
+    );
+  }
+  if (kind === "compact") {
+    return (
+      <div className="h-14 rounded-md bg-muted/40 p-1 flex flex-col gap-0.5">
+        <Box className="h-2 rounded-sm" />
+        <Box className="h-2 rounded-sm" />
+        <Box className="h-2 rounded-sm" />
+        <Box className="h-2 rounded-sm" />
+        <Box className="h-2 rounded-sm" />
+      </div>
+    );
+  }
+  // stack (default)
+  return (
+    <div className="h-14 rounded-md bg-muted/40 p-1.5 flex flex-col gap-1">
+      <Box className="h-5 rounded border border-muted-foreground/40 bg-background" />
+      <Box className="h-5 rounded border border-muted-foreground/40 bg-background" />
+    </div>
+  );
+}
+
+
