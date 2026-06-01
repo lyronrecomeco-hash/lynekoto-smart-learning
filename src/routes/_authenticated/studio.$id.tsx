@@ -544,23 +544,26 @@ function DividerEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => vo
 function EmptyCanvas({ onAdd }: { onAdd: (t: BlockType) => void }) {
   return (
     <div className="rounded-2xl border-2 border-dashed border-border bg-surface/60 p-12 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary shadow-glow">
-        <Sparkles className="h-6 w-6 text-primary-foreground" />
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+        <PenLine className="h-6 w-6" />
       </div>
       <h3 className="mt-5 font-display text-xl font-semibold">Canvas vazio</h3>
-      <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">Arraste um bloco da paleta ou comece pelos atalhos abaixo. Use a aba IA para gerar questões automaticamente.</p>
+      <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
+        Arraste um bloco da paleta ao lado ou comece pelos atalhos abaixo.
+      </p>
       <div className="mt-6 flex flex-wrap gap-2 justify-center">
         <Button variant="outline" onClick={() => onAdd("mcq")}><Plus className="mr-1.5 h-3.5 w-3.5" /> Múltipla Escolha</Button>
         <Button variant="outline" onClick={() => onAdd("tf")}><Plus className="mr-1.5 h-3.5 w-3.5" /> V / F</Button>
+        <Button variant="outline" onClick={() => onAdd("ordering")}><Plus className="mr-1.5 h-3.5 w-3.5" /> Ordenação</Button>
         <Button variant="outline" onClick={() => onAdd("text")}><Plus className="mr-1.5 h-3.5 w-3.5" /> Instrução</Button>
       </div>
     </div>
   );
 }
 
-// ============ Inspector ============
+// ============ Inspector (Bloco / Estilo / Projeto) ============
 function Inspector({
-  selected, onUpdate, projectId, onBlocksGenerated, project,
+  selected, onUpdate, projectId: _projectId, onBlocksGenerated: _onBlocksGenerated, project,
 }: {
   selected: Block | null;
   onUpdate: (patch: Partial<Block>) => void;
@@ -572,8 +575,8 @@ function Inspector({
     <Tabs defaultValue="block" className="h-full flex flex-col">
       <TabsList className="grid grid-cols-3 m-3">
         <TabsTrigger value="block"><Settings2 className="h-3.5 w-3.5 mr-1" /> Bloco</TabsTrigger>
+        <TabsTrigger value="style"><Palette className="h-3.5 w-3.5 mr-1" /> Estilo</TabsTrigger>
         <TabsTrigger value="project">Projeto</TabsTrigger>
-        <TabsTrigger value="ai"><Sparkles className="h-3.5 w-3.5 mr-1" /> IA</TabsTrigger>
       </TabsList>
 
       <TabsContent value="block" className="px-4 pb-4 flex-1 overflow-y-auto">
@@ -588,7 +591,7 @@ function Inspector({
               <Label className="text-xs">Tipo</Label>
               <div className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">{BLOCK_DEFS[selected.type].label}</div>
             </div>
-            {(selected.type === "mcq" || selected.type === "tf" || selected.type === "short") && (
+            {(selected.type === "mcq" || selected.type === "tf" || selected.type === "multi" || selected.type === "short" || selected.type === "ordering") && (
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -616,6 +619,49 @@ function Inspector({
         )}
       </TabsContent>
 
+      <TabsContent value="style" className="px-4 pb-4 flex-1 overflow-y-auto">
+        {!selected ? (
+          <div className="text-center py-12 text-sm text-muted-foreground">
+            <Palette className="mx-auto h-8 w-8 opacity-30 mb-3" />
+            Selecione um bloco para personalizar a cor.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs mb-2 block">Cor de destaque</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {BLOCK_COLORS.map((c) => {
+                  const active = (selected.color ?? "") === c.value;
+                  return (
+                    <button
+                      key={c.label}
+                      onClick={() => onUpdate({ color: c.value })}
+                      title={c.label}
+                      className={`group relative aspect-square rounded-lg border-2 transition-smooth ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-strong"}`}
+                      style={{ background: c.value || "var(--muted)" }}
+                    >
+                      {!c.value && <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">auto</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Cor personalizada (hex)</Label>
+              <Input
+                type="color"
+                value={selected.color?.startsWith("#") ? selected.color : "#4f46e5"}
+                onChange={(e) => onUpdate({ color: e.target.value })}
+                className="h-10 mt-1 cursor-pointer"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              A cor aparece como faixa lateral no editor e como destaque do bloco na apresentação.
+            </p>
+          </div>
+        )}
+      </TabsContent>
+
       <TabsContent value="project" className="px-4 pb-4 flex-1 overflow-y-auto">
         <div className="space-y-3 text-sm">
           <Row label="Matéria" value={project.subject ?? "—"} />
@@ -624,10 +670,6 @@ function Inspector({
           <Row label="Criado em" value={new Date(project.created_at).toLocaleDateString("pt-BR")} />
           <Row label="Última edição" value={new Date(project.updated_at).toLocaleString("pt-BR")} />
         </div>
-      </TabsContent>
-
-      <TabsContent value="ai" className="px-4 pb-4 flex-1 overflow-y-auto">
-        <AIPanel projectId={projectId} project={project} onGenerated={onBlocksGenerated} />
       </TabsContent>
     </Tabs>
   );
@@ -642,61 +684,3 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AIPanel({ projectId, project, onGenerated }: { projectId: string; project: any; onGenerated: (b: Block[]) => void }) {
-  const fn = useServerFn(generateBlocks);
-  const [topic, setTopic] = useState("");
-  const [count, setCount] = useState(5);
-  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
-  const [loading, setLoading] = useState(false);
-
-  const handle = async () => {
-    if (!topic.trim()) { toast.error("Informe o tema"); return; }
-    setLoading(true);
-    try {
-      const res = await fn({ data: { topic, count, difficulty, subject: project.subject ?? "", grade: project.grade ?? "" } });
-      onGenerated(res.blocks);
-      toast.success(`${res.blocks.length} blocos adicionados!`);
-      setTopic("");
-    } catch (err: any) { toast.error(err.message ?? "Erro ao gerar"); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 to-transparent p-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Wand2 className="h-4 w-4 text-primary" />
-          <span className="font-display font-semibold text-sm">Gerar com IA</span>
-        </div>
-        <p className="text-xs text-muted-foreground">Descreva um tema e a IA pedagógica adiciona blocos prontos ao canvas.</p>
-      </div>
-
-      <div>
-        <Label className="text-xs">Tema</Label>
-        <Textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex.: Frações equivalentes com exemplos do cotidiano" rows={3} className="mt-1 text-sm" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label className="text-xs">Questões</Label>
-          <Input type="number" min={1} max={20} value={count} onChange={(e) => setCount(parseInt(e.target.value) || 5)} className="h-9 mt-1" />
-        </div>
-        <div>
-          <Label className="text-xs">Dificuldade</Label>
-          <Select value={difficulty} onValueChange={(v: any) => setDifficulty(v)}>
-            <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="easy">Fácil</SelectItem>
-              <SelectItem value="medium">Médio</SelectItem>
-              <SelectItem value="hard">Difícil</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <Button disabled={loading} onClick={handle} className="w-full bg-gradient-primary">
-        {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando...</> : <><Sparkles className="mr-2 h-4 w-4" /> Gerar blocos</>}
-      </Button>
-    </div>
-  );
-}
