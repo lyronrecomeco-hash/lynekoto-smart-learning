@@ -144,8 +144,10 @@ function CanvasEditor() {
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState<string>("draft");
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [settings, setSettings] = useState<CanvasSettings>(DEFAULT_SETTINGS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
     if (project && !hydrated) {
@@ -162,24 +164,28 @@ function CanvasEditor() {
       );
       setBlocks(normalized);
       setSelectedId(normalized[0]?.id ?? null);
+      const s = (project as any).settings ?? {};
+      setSettings({ ...DEFAULT_SETTINGS, ...s });
       setHydrated(true);
     }
   }, [project, hydrated]);
 
   const saveStatus = useAutosave(
-    useMemo(() => ({ title, status, blocks }), [title, status, blocks]),
+    useMemo(() => ({ title, status, blocks, settings }), [title, status, blocks, settings]),
     async (v) => {
       if (!hydrated) return;
       const { error } = await supabase.from("activities").update({
         title: v.title || "Sem título",
         status: v.status,
         questions: v.blocks as any,
+        settings: v.settings as any,
       } as any).eq("id", id);
       if (error) throw error;
     },
   );
 
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
+
 
   // ===== Mutations =====
   const createBlock = (type: BlockType): Block => ({
