@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Loader2, Mail, Lock, BookOpen, Brain, BarChart3 } from "lucide-react";
+// Google sign-in intentionally removed per product decision.
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
