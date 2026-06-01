@@ -155,7 +155,7 @@ function AuthPage() {
             onClick={handleGoogle}
             disabled={loading}
             variant="outline"
-            className="mt-8 w-full h-11 border-border bg-card hover:bg-accent/40"
+            className="mt-8 w-full h-11 border-2 border-border-strong bg-surface text-foreground hover:bg-accent/40 hover:border-primary/50 transition-smooth"
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -167,58 +167,48 @@ function AuthPage() {
           </Button>
 
           <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
+            <div className="h-px flex-1 bg-border-strong" />
             <span className="text-xs font-medium text-muted-foreground">ou com e-mail</span>
-            <div className="h-px flex-1 bg-border" />
+            <div className="h-px flex-1 bg-border-strong" />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-medium text-foreground">
-                E-mail
-              </Label>
+              <Label htmlFor="email" className="text-xs font-semibold text-foreground">E-mail</Label>
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="voce@escola.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="h-11 pl-9 bg-card border-border focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
+                  id="email" type="email" placeholder="voce@escola.com"
+                  value={email} onChange={(e) => setEmail(e.target.value)} required
+                  className="h-11 pl-9 bg-surface border-2 border-border-strong text-foreground placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-xs font-medium text-foreground">
-                Senha
-              </Label>
+              <Label htmlFor="password" className="text-xs font-semibold text-foreground">Senha</Label>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="h-11 pl-9 bg-card border-border focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
+                  id="password" type="password" placeholder="••••••••"
+                  value={password} onChange={(e) => setPassword(e.target.value)} required minLength={1}
+                  className="h-11 pl-9 bg-surface border-2 border-border-strong text-foreground placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
                 />
               </div>
             </div>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 bg-gradient-primary text-primary-foreground shadow-elegant hover:shadow-glow transition-smooth"
-            >
+            <Button type="submit" disabled={loading}
+              className="w-full h-11 bg-gradient-primary text-primary-foreground shadow-elegant hover:shadow-glow transition-smooth font-semibold">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Entrar
+              Entrar no console
             </Button>
           </form>
 
-          <p className="mt-8 text-center text-xs text-muted-foreground">
+          <div className="mt-6 rounded-lg border-2 border-dashed border-border-strong bg-surface/60 p-3 text-center">
+            <p className="text-[11px] font-mono text-muted-foreground">
+              Acesso de demonstração: <span className="font-semibold text-foreground">admin@painel.com</span> / <span className="font-semibold text-foreground">admin1</span>
+            </p>
+          </div>
+
+          <p className="mt-6 text-center text-xs text-muted-foreground">
             Acesso exclusivo para educadores e instituições parceiras.
           </p>
         </div>
