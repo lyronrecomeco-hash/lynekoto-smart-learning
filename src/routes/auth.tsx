@@ -42,16 +42,6 @@ function AuthPage() {
     }
   };
 
-  const handleGoogle = async () => {
-    setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/dashboard",
-    });
-    if (result.error) {
-      toast.error("Falha no login com Google");
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="flex min-h-screen bg-background">
