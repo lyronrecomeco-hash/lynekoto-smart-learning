@@ -32,8 +32,8 @@ const ROUTE_LABELS: Record<string, string> = {
 function AuthenticatedLayout() {
   const path = useRouterState({ select: (r) => r.location.pathname });
 
-  // Only the live presentation is full-bleed. Studio canvas now lives inside the dashboard layout.
-  const isFullBleed = path.startsWith("/present/");
+  // Full-bleed: live presentation AND the studio canvas (so the editor uses 100% width).
+  const isFullBleed = path.startsWith("/present/") || /^\/studio\/[^/]+/.test(path);
 
   if (isFullBleed) {
     return <Outlet />;
