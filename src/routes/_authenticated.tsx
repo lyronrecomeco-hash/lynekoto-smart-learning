@@ -32,8 +32,8 @@ const ROUTE_LABELS: Record<string, string> = {
 function AuthenticatedLayout() {
   const path = useRouterState({ select: (r) => r.location.pathname });
 
-  // Full-bleed routes (no sidebar/header chrome)
-  const isFullBleed = path.startsWith("/present/") || /^\/studio\/[^/]+$/.test(path);
+  // Only the live presentation is full-bleed. Studio canvas now lives inside the dashboard layout.
+  const isFullBleed = path.startsWith("/present/");
 
   if (isFullBleed) {
     return <Outlet />;
