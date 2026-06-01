@@ -24,12 +24,12 @@ export const Route = createFileRoute("/_authenticated/studio")({
 });
 
 const COVERS = [
-  "linear-gradient(135deg, oklch(0.55 0.2 268), oklch(0.65 0.22 300))",
-  "linear-gradient(135deg, oklch(0.55 0.18 200), oklch(0.65 0.18 240))",
-  "linear-gradient(135deg, oklch(0.6 0.18 150), oklch(0.7 0.15 180))",
-  "linear-gradient(135deg, oklch(0.6 0.2 30), oklch(0.7 0.2 60))",
-  "linear-gradient(135deg, oklch(0.55 0.2 320), oklch(0.6 0.2 350))",
-  "linear-gradient(135deg, oklch(0.4 0.1 260), oklch(0.5 0.15 280))",
+  "linear-gradient(135deg, oklch(0.32 0.08 268), oklch(0.42 0.10 282))",
+  "linear-gradient(135deg, oklch(0.30 0.05 230), oklch(0.40 0.08 245))",
+  "linear-gradient(135deg, oklch(0.34 0.07 165), oklch(0.44 0.08 180))",
+  "linear-gradient(135deg, oklch(0.38 0.09 40), oklch(0.46 0.10 55))",
+  "linear-gradient(135deg, oklch(0.22 0.02 260), oklch(0.30 0.03 270))",
+  "linear-gradient(135deg, oklch(0.32 0.06 320), oklch(0.40 0.07 340))",
 ];
 
 function StudioList() {
@@ -71,7 +71,9 @@ function StudioList() {
     if (error) { toast.error(error.message); return; }
     toast.success("Projeto criado!");
     setOpen(false);
-    qc.invalidateQueries({ queryKey: ["studio-projects"] });
+    await qc.invalidateQueries({ queryKey: ["studio-projects"] });
+    // Pre-seed the canvas query so the editor opens without a blank flash
+    qc.setQueryData(["studio-project", data.id], data);
     navigate({ to: "/studio/$id", params: { id: data.id } });
   };
 

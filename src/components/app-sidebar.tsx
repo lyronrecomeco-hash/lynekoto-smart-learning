@@ -89,7 +89,7 @@ export function AppSidebar() {
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                        <Link to={item.url}>
+                        <Link to={item.url} preload="intent">
                           <item.icon className="h-4 w-4" />
                           {!collapsed && <span className="text-sm">{item.title}</span>}
                         </Link>

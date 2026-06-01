@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,12 +26,33 @@ import {
 } from "lucide-react";
 import { useAutosave } from "@/hooks/use-autosave";
 import { generateBlocks } from "@/lib/activities.functions";
-import { useTheme } from "@/hooks/use-theme";
+
 
 export const Route = createFileRoute("/_authenticated/studio/$id")({
   head: () => ({ meta: [{ title: "Canvas — LyneKoto" }] }),
   component: CanvasEditor,
+  errorComponent: ({ error, reset }) => (
+    <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-3 p-10 text-center">
+      <h2 className="font-display text-xl font-semibold">Não foi possível abrir o projeto</h2>
+      <p className="text-sm text-muted-foreground max-w-md">{error.message}</p>
+      <div className="flex gap-2">
+        <button onClick={reset} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Tentar novamente</button>
+        <a href="/studio" className="rounded-md border border-border-strong px-4 py-2 text-sm font-medium">Voltar ao Studio</a>
+      </div>
+    </div>
+  ),
+  pendingComponent: () => (
+    <div className="flex h-full min-h-[60vh] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  ),
 });
+
+// Safe ID generator (works in SSR + old browsers)
+function genId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return "id-" + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+}
 
 // ============ Block types ============
 type BlockType = "mcq" | "tf" | "short" | "text" | "divider" | "media";
@@ -55,8 +76,6 @@ const BLOCK_DEFS: Record<BlockType, { label: string; icon: any; description: str
 // ============ Component ============
 function CanvasEditor() {
   const { id } = Route.useParams();
-  const navigate = useNavigate();
-  const { theme } = useTheme();
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["studio-project", id],
@@ -80,7 +99,7 @@ function CanvasEditor() {
       const raw = (project.questions as any[]) ?? [];
       const normalized: Block[] = raw.map((b: any) =>
         b?.type ? b : {
-          id: crypto.randomUUID(),
+          id: genId(),
           type: "mcq",
           data: { question: b.question, options: b.options, correct_index: b.correct_index, explanation: b.explanation },
           points: 10, time_limit: 30,
@@ -109,7 +128,7 @@ function CanvasEditor() {
   // ===== Mutations =====
   const addBlock = (type: BlockType, atIndex?: number) => {
     const block: Block = {
-      id: crypto.randomUUID(),
+      id: genId(),
       type,
       data: BLOCK_DEFS[type].make(),
       points: type === "mcq" || type === "tf" || type === "short" ? 10 : undefined,
@@ -136,7 +155,7 @@ function CanvasEditor() {
       const idx = prev.findIndex((b) => b.id === bid);
       if (idx === -1) return prev;
       const copy = [...prev];
-      const dup = { ...prev[idx], id: crypto.randomUUID(), data: structuredClone(prev[idx].data) };
+      const dup = { ...prev[idx], id: genId(), data: structuredClone(prev[idx].data) };
       copy.splice(idx + 1, 0, dup);
       return copy;
     });
@@ -170,18 +189,18 @@ function CanvasEditor() {
 
   if (isLoading || !project) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-canvas">
+      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center bg-canvas">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className={`fixed inset-0 flex flex-col bg-canvas ${theme === "dark" ? "dark" : ""}`}>
+    <div className="flex flex-col bg-canvas h-[calc(100vh-3.5rem)]">
       {/* Top toolbar */}
-      <header className="flex h-14 flex-shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate({ to: "/studio" })}>
-          <ArrowLeft className="h-4 w-4" />
+      <header className="flex h-12 flex-shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
+        <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5">
+          <Link to="/studio"><ArrowLeft className="h-3.5 w-3.5" /> Projetos</Link>
         </Button>
         <div className="h-5 w-px bg-border" />
         <Input
