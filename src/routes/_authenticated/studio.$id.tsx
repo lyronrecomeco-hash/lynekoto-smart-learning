@@ -245,6 +245,7 @@ function CanvasEditor() {
         return copy;
       });
       setSelectedId(block.id);
+      if (type === "step") setSettings((s) => (s.stepMode ? s : { ...s, stepMode: true }));
       return;
     }
     if (!over || active.id === over.id) return;
