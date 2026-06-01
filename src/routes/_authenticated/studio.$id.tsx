@@ -55,7 +55,7 @@ function genId() {
 }
 
 // ============ Block types ============
-type BlockType = "mcq" | "tf" | "multi" | "short" | "long" | "ordering" | "poll" | "text" | "quote" | "divider" | "media";
+type BlockType = "mcq" | "tf" | "multi" | "short" | "long" | "ordering" | "poll" | "text" | "quote" | "divider" | "media" | "step";
 interface Block {
   id: string;
   type: BlockType;
@@ -77,6 +77,7 @@ const BLOCK_DEFS: Record<BlockType, { label: string; icon: any; description: str
   quote:    { label: "Destaque",         icon: Quote,        description: "Citação ou aviso",           make: () => ({ content: "", author: "" }) },
   media:    { label: "Mídia",            icon: ImageIcon,    description: "Imagem por URL",             make: () => ({ url: "", caption: "" }) },
   divider:  { label: "Seção",            icon: Minus,        description: "Separador",                   make: () => ({ label: "Nova seção" }) },
+  step:     { label: "Próximo (etapa)",  icon: ChevronRight, description: "Quebra de página: avança",    make: () => ({ label: "Próximo" }) },
 };
 
 const BLOCK_COLORS = [
@@ -89,6 +90,40 @@ const BLOCK_COLORS = [
   { label: "Musgo",    value: "oklch(0.5 0.07 145)" },
   { label: "Terracota", value: "oklch(0.6 0.13 40)" },
 ];
+
+// ============ Project-level Settings ============
+type LayoutStyle = "stack" | "cards" | "list" | "compact";
+interface CanvasSettings {
+  layout: LayoutStyle;
+  background: string;          // CSS color or gradient
+  accent: string;              // CSS color
+  contentWidth: "narrow" | "comfortable" | "wide";
+  stepMode: boolean;           // when true: only render one step at a time in canvas
+}
+const DEFAULT_SETTINGS: CanvasSettings = {
+  layout: "stack",
+  background: "",
+  accent: "",
+  contentWidth: "comfortable",
+  stepMode: false,
+};
+const LAYOUT_PRESETS: { value: LayoutStyle; label: string; description: string }[] = [
+  { value: "stack",   label: "Padrão",  description: "Cards com borda — visual clássico" },
+  { value: "cards",   label: "Cards",   description: "Cartões elevados com sombra" },
+  { value: "list",    label: "Lista",   description: "Itens em lista enxuta" },
+  { value: "compact", label: "Compacto", description: "Espaçamento reduzido para muitas perguntas" },
+];
+const BACKGROUND_PRESETS = [
+  { label: "Padrão (pontos)", value: "" },
+  { label: "Branco",          value: "#ffffff" },
+  { label: "Cinza",           value: "oklch(0.97 0.005 260)" },
+  { label: "Marinho",         value: "oklch(0.22 0.04 260)" },
+  { label: "Grafite",         value: "oklch(0.18 0.01 250)" },
+  { label: "Creme",           value: "oklch(0.97 0.02 80)" },
+  { label: "Indigo suave",    value: "linear-gradient(135deg, oklch(0.96 0.03 268), oklch(0.93 0.05 280))" },
+  { label: "Aurora",          value: "linear-gradient(135deg, oklch(0.95 0.05 200), oklch(0.93 0.06 320))" },
+];
+
 
 // ============ Component ============
 function CanvasEditor() {
