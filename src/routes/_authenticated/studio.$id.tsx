@@ -482,8 +482,8 @@ function CanvasEditor() {
           </div>
         </div>
 
-        {/* Right: Inspector */}
-        <aside className="w-80 flex-shrink-0 border-l border-border bg-surface overflow-y-auto scroll-clean">
+        {/* Right: Inspector — collapses on mobile to give the canvas full width. */}
+        <aside className="hidden md:block w-80 flex-shrink-0 border-l border-border bg-surface overflow-y-auto scroll-clean">
           <Inspector
             selected={selected}
             onUpdate={(patch) => selected && updateBlock(selected.id, patch as any)}
@@ -492,6 +492,7 @@ function CanvasEditor() {
             project={project}
           />
         </aside>
+
       </div>
     </div>
     </DndContext>
