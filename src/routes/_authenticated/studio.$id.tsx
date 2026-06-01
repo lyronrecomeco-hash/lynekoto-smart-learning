@@ -922,6 +922,48 @@ function Inspector({
                 className="h-9 mt-2 cursor-pointer"
               />
             </div>
+            <div>
+              <Label className="text-xs mb-2 block">Fundo do card</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: "auto", value: "" },
+                  { label: "Branco", value: "#ffffff" },
+                  { label: "Creme", value: "oklch(0.97 0.02 80)" },
+                  { label: "Cinza", value: "oklch(0.96 0.005 260)" },
+                  { label: "Indigo", value: "oklch(0.96 0.03 268)" },
+                  { label: "Esmer.", value: "oklch(0.95 0.05 158)" },
+                  { label: "Âmbar", value: "oklch(0.96 0.05 80)" },
+                  { label: "Carm.", value: "oklch(0.95 0.05 25)" },
+                ].map((c) => {
+                  const active = (selected.bg ?? "") === c.value;
+                  return (
+                    <button
+                      key={c.label}
+                      onClick={() => onUpdate({ bg: c.value } as any)}
+                      title={c.label}
+                      className={`relative aspect-square rounded-lg border-2 transition-smooth ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-strong"}`}
+                      style={{ background: c.value || "var(--muted)" }}
+                    >
+                      {!c.value && <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">auto</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 grid grid-cols-[1fr_auto] gap-2 items-center">
+                <Input
+                  value={selected.bg ?? ""}
+                  onChange={(e) => onUpdate({ bg: e.target.value } as any)}
+                  placeholder="cor ou linear-gradient(...)"
+                  className="h-9 text-xs"
+                />
+                <Input
+                  type="color"
+                  value={selected.bg?.startsWith("#") ? selected.bg : "#ffffff"}
+                  onChange={(e) => onUpdate({ bg: e.target.value } as any)}
+                  className="h-9 w-12 cursor-pointer p-1"
+                />
+              </div>
+            </div>
           </div>
         )}
       </TabsContent>
