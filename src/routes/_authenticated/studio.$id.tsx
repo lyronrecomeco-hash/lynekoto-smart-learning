@@ -531,7 +531,7 @@ function InsertBetween({ onAdd }: { onAdd: (t: BlockType) => void }) {
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-center">
         {open ? (
           <div className="flex items-center gap-1 rounded-full border border-border bg-surface shadow-soft p-1 z-10">
-            {(["mcq", "tf", "multi", "short", "ordering", "poll", "text", "media", "divider"] as BlockType[]).map((t) => {
+            {(["mcq", "tf", "multi", "short", "ordering", "poll", "text", "media", "divider", "step"] as BlockType[]).map((t) => {
               const D = BLOCK_DEFS[t];
               return (
                 <button key={t} onClick={() => { onAdd(t); setOpen(false); }} title={D.label}
