@@ -204,9 +204,6 @@ function CanvasEditor() {
         <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5">
           <Link to="/studio"><ArrowLeft className="h-3.5 w-3.5" /> Projetos</Link>
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate({ to: "/studio" })}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
         <div className="h-5 w-px bg-border" />
         <Input
           value={title}
