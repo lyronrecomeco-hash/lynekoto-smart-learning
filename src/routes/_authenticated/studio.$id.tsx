@@ -565,8 +565,30 @@ function BlockEditor({ block, onUpdate }: { block: Block; onUpdate: (d: any) => 
     case "quote":    return <QuoteEditor data={block.data} onUpdate={onUpdate} />;
     case "media":    return <MediaEditor data={block.data} onUpdate={onUpdate} />;
     case "divider":  return <DividerEditor data={block.data} onUpdate={onUpdate} />;
+    case "step":     return <StepEditor data={block.data} onUpdate={onUpdate} />;
     default: return null;
   }
+}
+
+function StepEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <ChevronRight className="h-4 w-4" />
+      </div>
+      <div className="flex-1">
+        <Input
+          value={data.label ?? "Próximo"}
+          onChange={(e) => onUpdate({ label: e.target.value })}
+          placeholder="Próximo"
+          className="border-0 bg-transparent font-display font-semibold focus-visible:bg-muted/30 px-2"
+        />
+        <p className="text-[11px] text-muted-foreground px-2 mt-0.5">
+          Quebra de etapa — divide o quiz em páginas. Ative "Etapas" em Estilo.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function MultiEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
