@@ -28,7 +28,7 @@ function normalize(blocks: AnyBlock[]) {
     .map((b) => {
       // New canvas format: { id, type, data: {...} }
       if (b && typeof b === "object" && b.type && b.data) {
-        return { type: b.type, ...b.data };
+        return { type: b.type, ...b.data, _color: b.color, _bg: b.bg };
       }
       // Legacy mcq directly { question, options, correct_index, explanation }
       if (b && b.options && Array.isArray(b.options)) {
@@ -36,7 +36,8 @@ function normalize(blocks: AnyBlock[]) {
       }
       return b;
     })
-    .filter((b) => b && (b.type === "mcq" || b.type === "tf" || b.type === "short" || b.type === "poll" || b.type === "multi"));
+    // Drop pure layout blocks — they aren't presentable as questions
+    .filter((b) => b && !["divider", "step"].includes(b.type));
 }
 
 function Present() {
