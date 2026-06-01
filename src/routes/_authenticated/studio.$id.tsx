@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
@@ -76,9 +76,12 @@ const BLOCK_DEFS: Record<BlockType, { label: string; icon: any; description: str
 // ============ Component ============
 function CanvasEditor() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["studio-project", id],
+    initialData: () => queryClient.getQueryData(["studio-project", id]),
+    enabled: typeof window !== "undefined",
     queryFn: async () => {
       const { data, error } = await supabase.from("activities").select("*").eq("id", id).single();
       if (error) throw error;
@@ -106,6 +109,7 @@ function CanvasEditor() {
         }
       );
       setBlocks(normalized);
+      setSelectedId(normalized[0]?.id ?? null);
       setHydrated(true);
     }
   }, [project, hydrated]);
