@@ -22,10 +22,10 @@ import { toast } from "sonner";
 import {
   ArrowLeft, CheckCircle2, CircleDot, Type, Image as ImageIcon, Minus,
   ListChecks, MessageSquare, GripVertical, Plus, Trash2, Copy, Play,
-  Sparkles, Wand2, Loader2, Save, MoreVertical, Settings2,
+  Loader2, Save, MoreVertical, Settings2, Palette, BarChart3,
+  ArrowDownUp, AlignLeft, PenLine, Quote,
 } from "lucide-react";
 import { useAutosave } from "@/hooks/use-autosave";
-import { generateBlocks } from "@/lib/activities.functions";
 
 
 export const Route = createFileRoute("/_authenticated/studio/$id")({
