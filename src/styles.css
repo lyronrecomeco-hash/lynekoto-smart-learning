@@ -105,15 +105,15 @@
   --chart-4: oklch(0.6 0.22 25);
   --chart-5: oklch(0.55 0.15 220);
 
-  /* Sidebar — light variant: off-white surface, indigo active state */
-  --sidebar: oklch(0.975 0.005 260);
-  --sidebar-foreground: oklch(0.28 0.03 265);
-  --sidebar-primary: oklch(0.45 0.18 268);
+  /* Sidebar — DARK in both themes for a professional dashboard look */
+  --sidebar: oklch(0.17 0.022 268);
+  --sidebar-foreground: oklch(0.92 0.012 260);
+  --sidebar-primary: oklch(0.68 0.18 275);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.93 0.025 268);
-  --sidebar-accent-foreground: oklch(0.32 0.12 270);
-  --sidebar-border: oklch(0.88 0.01 260);
-  --sidebar-ring: oklch(0.55 0.18 268);
+  --sidebar-accent: oklch(0.26 0.055 270);
+  --sidebar-accent-foreground: oklch(0.98 0.01 260);
+  --sidebar-border: oklch(0.24 0.022 268);
+  --sidebar-ring: oklch(0.68 0.18 275);
 
   --gradient-primary: linear-gradient(135deg, oklch(0.45 0.18 268) 0%, oklch(0.6 0.2 285) 100%);
   --gradient-hero: linear-gradient(135deg, oklch(0.18 0.04 268) 0%, oklch(0.28 0.1 275) 50%, oklch(0.35 0.15 290) 100%);
