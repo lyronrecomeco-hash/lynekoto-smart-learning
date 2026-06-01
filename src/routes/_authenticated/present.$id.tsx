@@ -57,6 +57,16 @@ function Present() {
   });
 
   const questions = useMemo(() => normalize((activity?.questions as any[]) ?? []), [activity]);
+  const settings: any = (activity as any)?.settings ?? {};
+  const layoutClass =
+    settings.layout === "cards" ? "present-layout-cards" :
+    settings.layout === "list" ? "present-layout-list" :
+    settings.layout === "compact" ? "present-layout-compact" : "";
+  const projBgStyle: React.CSSProperties = settings.background
+    ? (String(settings.background).startsWith("linear-") || String(settings.background).startsWith("radial-")
+        ? { backgroundImage: settings.background }
+        : { backgroundColor: settings.background })
+    : {};
 
   // keyboard nav
   useEffect(() => {
