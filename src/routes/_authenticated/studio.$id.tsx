@@ -206,6 +206,7 @@ function CanvasEditor() {
       return copy;
     });
     setSelectedId(block.id);
+    if (type === "step") setSettings((s) => (s.stepMode ? s : { ...s, stepMode: true }));
   };
 
   const updateBlock = (bid: string, patch: Partial<Block> | { data: any }) => {
