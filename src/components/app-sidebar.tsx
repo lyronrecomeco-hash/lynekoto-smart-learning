@@ -93,7 +93,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}>
+            <SidebarMenuButton onClick={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }}>
               <LogOut className="h-4 w-4" />
               {!collapsed && <span>Sair</span>}
             </SidebarMenuButton>
