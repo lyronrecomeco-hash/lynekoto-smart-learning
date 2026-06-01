@@ -71,7 +71,9 @@ function StudioList() {
     if (error) { toast.error(error.message); return; }
     toast.success("Projeto criado!");
     setOpen(false);
-    qc.invalidateQueries({ queryKey: ["studio-projects"] });
+    await qc.invalidateQueries({ queryKey: ["studio-projects"] });
+    // Pre-seed the canvas query so the editor opens without a blank flash
+    qc.setQueryData(["studio-project", data.id], data);
     navigate({ to: "/studio/$id", params: { id: data.id } });
   };
 
