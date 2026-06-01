@@ -218,34 +218,67 @@
     background-size: 18px 18px;
   }
 
-  /* Transparent / invisible scrollbar (hover reveals subtle thumb). */
-  .scroll-clean {
+  /* Transparent / invisible scrollbar — applied globally (mobile + desktop). */
+  .scroll-clean,
+  html,
+  body,
+  main,
+  aside,
+  .overflow-auto,
+  .overflow-y-auto,
+  .overflow-x-auto {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
   }
-  .scroll-clean::-webkit-scrollbar { width: 10px; height: 10px; }
-  .scroll-clean::-webkit-scrollbar-track { background: transparent; }
-  .scroll-clean::-webkit-scrollbar-thumb {
+  .scroll-clean::-webkit-scrollbar,
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  main::-webkit-scrollbar,
+  aside::-webkit-scrollbar,
+  .overflow-auto::-webkit-scrollbar,
+  .overflow-y-auto::-webkit-scrollbar,
+  .overflow-x-auto::-webkit-scrollbar { width: 10px; height: 10px; }
+  .scroll-clean::-webkit-scrollbar-track,
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track,
+  main::-webkit-scrollbar-track,
+  aside::-webkit-scrollbar-track,
+  .overflow-auto::-webkit-scrollbar-track,
+  .overflow-y-auto::-webkit-scrollbar-track,
+  .overflow-x-auto::-webkit-scrollbar-track { background: transparent; }
+  .scroll-clean::-webkit-scrollbar-thumb,
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb,
+  main::-webkit-scrollbar-thumb,
+  aside::-webkit-scrollbar-thumb,
+  .overflow-auto::-webkit-scrollbar-thumb,
+  .overflow-y-auto::-webkit-scrollbar-thumb,
+  .overflow-x-auto::-webkit-scrollbar-thumb {
     background-color: transparent;
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: padding-box;
     transition: background-color .2s;
   }
-  .scroll-clean:hover::-webkit-scrollbar-thumb {
+  *:hover::-webkit-scrollbar-thumb {
     background-color: oklch(from var(--foreground) l c h / 0.18);
   }
-  .scroll-clean::-webkit-scrollbar-thumb:hover {
+  *::-webkit-scrollbar-thumb:hover {
     background-color: oklch(from var(--foreground) l c h / 0.32);
   }
 
-  /* Canvas layout style helpers — each produces a visible visual effect */
-  .canvas-layout-stack > * { transition: all .2s ease; }
+  /* Canvas layout style helpers — each produces a visible visual effect.
+     Cards now carry a soft shadow so they remain legible in light theme. */
+  .canvas-layout-stack > * > div:first-child {
+    box-shadow: 0 1px 2px oklch(from var(--foreground) l c h / 0.04),
+                0 4px 14px -8px oklch(from var(--foreground) l c h / 0.10);
+    transition: all .2s ease;
+  }
 
   .canvas-layout-cards { gap: 1.25rem; display: flex; flex-direction: column; }
   .canvas-layout-cards > * > div:first-child {
     border-radius: var(--radius-2xl) !important;
-    box-shadow: 0 10px 30px -12px oklch(from var(--foreground) l c h / 0.18);
+    box-shadow: 0 12px 32px -14px oklch(from var(--foreground) l c h / 0.22);
     border-width: 1px !important;
   }
 
@@ -260,6 +293,21 @@
   .canvas-layout-compact { gap: .35rem; display: flex; flex-direction: column; }
   .canvas-layout-compact > * > div:first-child > div:last-child { padding: .65rem 1rem !important; }
   .canvas-layout-compact > * > div:first-child > div:first-child { padding: .35rem .75rem !important; }
+
+  /* Present-mode layout helpers — apply the same look to the rendered options grid. */
+  .present-layout-cards { gap: 1rem; }
+  .present-layout-cards > * {
+    border-radius: var(--radius-2xl) !important;
+    box-shadow: 0 14px 36px -16px oklch(from var(--foreground) l c h / 0.28);
+  }
+  .present-layout-list { display: flex !important; flex-direction: column; gap: 0; }
+  .present-layout-list > * {
+    border-radius: 0 !important;
+    border-width: 0 0 1px 0 !important;
+    background: transparent !important;
+  }
+  .present-layout-compact { gap: .4rem; }
+  .present-layout-compact > * { padding: .65rem 1rem !important; }
 
   /* Step group — visually "shrinks" inactive groups when stepMode is off,
      making the page breaks obvious in the editor. */
