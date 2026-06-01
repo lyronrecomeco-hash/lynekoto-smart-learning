@@ -202,11 +202,6 @@ function AuthPage() {
             </Button>
           </form>
 
-          <div className="mt-6 rounded-lg border-2 border-dashed border-border-strong bg-surface/60 p-3 text-center">
-            <p className="text-[11px] font-mono text-muted-foreground">
-              Acesso de demonstração: <span className="font-semibold text-foreground">admin@painel.com</span> / <span className="font-semibold text-foreground">admin1</span>
-            </p>
-          </div>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
             Acesso exclusivo para educadores e instituições parceiras.
