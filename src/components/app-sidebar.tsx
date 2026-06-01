@@ -101,7 +101,27 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/45 px-2">
+              Administração
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={path.startsWith("/admin")} tooltip="Admin Center">
+                    <Link to="/admin">
+                      <ShieldCheck className="h-4 w-4" />
+                      {!collapsed && <span className="text-sm">Admin Center</span>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
+
 
       <SidebarFooter className="border-t border-sidebar-border p-2">
         <DropdownMenu>
