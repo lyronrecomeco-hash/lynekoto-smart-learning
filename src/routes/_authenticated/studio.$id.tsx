@@ -968,7 +968,7 @@ function Inspector({
       </TabsContent>
 
 
-      <TabsContent value="project" className="px-4 pb-4 flex-1 overflow-y-auto">
+      <TabsContent value="project" className="px-4 pb-4 flex-1 overflow-y-auto scroll-clean">
         <div className="space-y-3 text-sm">
           <Row label="Matéria" value={project.subject ?? "—"} />
           <Row label="Série" value={project.grade ?? "—"} />
