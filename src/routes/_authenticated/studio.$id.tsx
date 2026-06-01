@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
-  useSensor, useSensors, type DragEndEvent,
+  useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext, arrayMove, sortableKeyboardCoordinates,
@@ -130,14 +130,16 @@ function CanvasEditor() {
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
 
   // ===== Mutations =====
-  const addBlock = (type: BlockType, atIndex?: number) => {
-    const block: Block = {
+  const createBlock = (type: BlockType): Block => ({
       id: genId(),
       type,
       data: BLOCK_DEFS[type].make(),
       points: type === "mcq" || type === "tf" || type === "short" ? 10 : undefined,
       time_limit: type === "mcq" || type === "tf" ? 30 : undefined,
-    };
+  });
+
+  const addBlock = (type: BlockType, atIndex?: number) => {
+    const block = createBlock(type);
     setBlocks((prev) => {
       if (atIndex === undefined || atIndex >= prev.length) return [...prev, block];
       const copy = [...prev];
@@ -169,10 +171,27 @@ function CanvasEditor() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
+    const activeId = String(active.id);
+    const overId = over ? String(over.id) : null;
+    if (activeId.startsWith("palette:")) {
+      const type = activeId.replace("palette:", "") as BlockType;
+      const block = createBlock(type);
+      setBlocks((items) => {
+        if (!overId || overId === "canvas-dropzone") return [...items, block];
+        const idx = items.findIndex((b) => b.id === overId);
+        if (idx === -1) return [...items, block];
+        const copy = [...items];
+        copy.splice(idx, 0, block);
+        return copy;
+      });
+      setSelectedId(block.id);
+      return;
+    }
     if (!over || active.id === over.id) return;
     setBlocks((items) => {
       const oldIdx = items.findIndex((b) => b.id === active.id);
       const newIdx = items.findIndex((b) => b.id === over.id);
+      if (oldIdx === -1 || newIdx === -1) return items;
       return arrayMove(items, oldIdx, newIdx);
     });
   };
