@@ -359,8 +359,8 @@ function CanvasEditor() {
       </header>
 
       <div className="flex flex-1 min-h-0">
-        {/* Left: Palette */}
-        <aside className="w-60 flex-shrink-0 border-r border-border bg-surface overflow-y-auto scroll-clean">
+        {/* Left: Palette — hidden on mobile to maximize canvas; access via "+" button between blocks. */}
+        <aside className="hidden md:block w-60 flex-shrink-0 border-r border-border bg-surface overflow-y-auto scroll-clean">
           <div className="p-4">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Blocos</div>
             <div className="space-y-1">
@@ -378,6 +378,7 @@ function CanvasEditor() {
             </div>
           </div>
         </aside>
+
 
         {/* Center: Canvas */}
         <div
