@@ -37,6 +37,33 @@ const COVERS = [
   "linear-gradient(135deg, oklch(0.32 0.06 320), oklch(0.40 0.07 340))",
 ];
 
+function makeBlockId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `block-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function createStarterQuizBlocks(projectTitle: string) {
+  return [
+    {
+      id: makeBlockId(),
+      type: "text",
+      data: { content: `Abertura do quiz: ${projectTitle}. Ajuste aqui o contexto, objetivo e instruções para os alunos.` },
+    },
+    {
+      id: makeBlockId(),
+      type: "mcq",
+      data: {
+        question: "Digite aqui a primeira pergunta do quiz",
+        options: ["Alternativa A", "Alternativa B", "Alternativa C", "Alternativa D"],
+        correct_index: 0,
+        explanation: "Explique por que esta alternativa é a correta.",
+      },
+      points: 10,
+      time_limit: 30,
+    },
+  ];
+}
+
 function StudioList() {
   const navigate = useNavigate();
   const qc = useQueryClient();
