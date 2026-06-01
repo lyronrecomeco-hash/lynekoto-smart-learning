@@ -31,7 +31,28 @@ import { useTheme } from "@/hooks/use-theme";
 export const Route = createFileRoute("/_authenticated/studio/$id")({
   head: () => ({ meta: [{ title: "Canvas — LyneKoto" }] }),
   component: CanvasEditor,
+  errorComponent: ({ error, reset }) => (
+    <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-3 p-10 text-center">
+      <h2 className="font-display text-xl font-semibold">Não foi possível abrir o projeto</h2>
+      <p className="text-sm text-muted-foreground max-w-md">{error.message}</p>
+      <div className="flex gap-2">
+        <button onClick={reset} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Tentar novamente</button>
+        <a href="/studio" className="rounded-md border border-border-strong px-4 py-2 text-sm font-medium">Voltar ao Studio</a>
+      </div>
+    </div>
+  ),
+  pendingComponent: () => (
+    <div className="flex h-full min-h-[60vh] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  ),
 });
+
+// Safe ID generator (works in SSR + old browsers)
+function genId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return "id-" + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+}
 
 // ============ Block types ============
 type BlockType = "mcq" | "tf" | "short" | "text" | "divider" | "media";
