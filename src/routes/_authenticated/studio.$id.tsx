@@ -191,7 +191,7 @@ function CanvasEditor() {
 
   if (isLoading || !project) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-canvas">
+      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center bg-canvas">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
