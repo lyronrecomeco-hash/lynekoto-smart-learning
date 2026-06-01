@@ -55,23 +55,40 @@ function genId() {
 }
 
 // ============ Block types ============
-type BlockType = "mcq" | "tf" | "short" | "text" | "divider" | "media";
+type BlockType = "mcq" | "tf" | "multi" | "short" | "long" | "ordering" | "poll" | "text" | "quote" | "divider" | "media";
 interface Block {
   id: string;
   type: BlockType;
   data: any;
   points?: number;
   time_limit?: number;
+  color?: string; // hex / oklch / css color for block accent
 }
 
 const BLOCK_DEFS: Record<BlockType, { label: string; icon: any; description: string; make: () => Block["data"] }> = {
-  mcq: { label: "Múltipla Escolha", icon: ListChecks, description: "4 alternativas, 1 correta", make: () => ({ question: "", options: ["", "", "", ""], correct_index: 0, explanation: "" }) },
-  tf: { label: "Verdadeiro / Falso", icon: CircleDot, description: "Pergunta binária", make: () => ({ question: "", correct: true, explanation: "" }) },
-  short: { label: "Resposta curta", icon: MessageSquare, description: "Texto livre", make: () => ({ question: "", answer: "", explanation: "" }) },
-  text: { label: "Instrução", icon: Type, description: "Texto explicativo", make: () => ({ content: "" }) },
-  media: { label: "Mídia", icon: ImageIcon, description: "Imagem por URL", make: () => ({ url: "", caption: "" }) },
-  divider: { label: "Seção", icon: Minus, description: "Separador de seção", make: () => ({ label: "Nova seção" }) },
+  mcq:      { label: "Múltipla Escolha", icon: ListChecks,  description: "4 alternativas, 1 correta",   make: () => ({ question: "", options: ["", "", "", ""], correct_index: 0, explanation: "" }) },
+  tf:       { label: "Verdadeiro / Falso", icon: CircleDot, description: "Pergunta binária",            make: () => ({ question: "", correct: true, explanation: "" }) },
+  multi:    { label: "Múltipla resposta", icon: CheckCircle2, description: "Várias corretas",           make: () => ({ question: "", options: ["", "", "", ""], correct_indices: [0], explanation: "" }) },
+  short:    { label: "Resposta curta",   icon: MessageSquare, description: "Texto livre — 1 linha",     make: () => ({ question: "", answer: "", explanation: "" }) },
+  long:     { label: "Dissertativa",     icon: AlignLeft,    description: "Resposta longa, sem gabarito", make: () => ({ question: "", guidance: "" }) },
+  ordering: { label: "Ordenação",        icon: ArrowDownUp,  description: "Coloque na ordem correta",   make: () => ({ question: "", items: ["", "", ""], explanation: "" }) },
+  poll:     { label: "Enquete",          icon: BarChart3,    description: "Sem resposta correta",       make: () => ({ question: "", options: ["", ""] }) },
+  text:     { label: "Instrução",        icon: Type,         description: "Texto explicativo",          make: () => ({ content: "" }) },
+  quote:    { label: "Destaque",         icon: Quote,        description: "Citação ou aviso",           make: () => ({ content: "", author: "" }) },
+  media:    { label: "Mídia",            icon: ImageIcon,    description: "Imagem por URL",             make: () => ({ url: "", caption: "" }) },
+  divider:  { label: "Seção",            icon: Minus,        description: "Separador",                   make: () => ({ label: "Nova seção" }) },
 };
+
+const BLOCK_COLORS = [
+  { label: "Padrão",   value: "" },
+  { label: "Indigo",   value: "oklch(0.55 0.18 268)" },
+  { label: "Esmeralda", value: "oklch(0.55 0.14 158)" },
+  { label: "Âmbar",    value: "oklch(0.72 0.15 70)" },
+  { label: "Carmesim", value: "oklch(0.58 0.20 25)" },
+  { label: "Ardósia",  value: "oklch(0.48 0.03 260)" },
+  { label: "Musgo",    value: "oklch(0.5 0.07 145)" },
+  { label: "Terracota", value: "oklch(0.6 0.13 40)" },
+];
 
 // ============ Component ============
 function CanvasEditor() {
