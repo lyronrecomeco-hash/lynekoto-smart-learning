@@ -974,22 +974,25 @@ function Inspector({
         <div className="space-y-5">
           <div>
             <Label className="text-xs mb-2 block">Estilo do quiz</Label>
-            <div className="grid gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {LAYOUT_PRESETS.map((p) => {
                 const active = settings.layout === p.value;
                 return (
                   <button
                     key={p.value}
                     onClick={() => onSettingsChange({ layout: p.value })}
-                    className={`text-left rounded-lg border-2 px-3 py-2 transition-smooth ${active ? "border-primary bg-primary/5" : "border-border hover:border-strong"}`}
+                    className={`text-left rounded-lg border-2 p-2 transition-smooth ${active ? "border-primary bg-primary/5 shadow-soft" : "border-border hover:border-strong"}`}
+                    title={p.description}
                   >
-                    <div className="text-sm font-medium">{p.label}</div>
-                    <div className="text-[11px] text-muted-foreground">{p.description}</div>
+                    <LayoutPreview kind={p.value} />
+                    <div className="text-xs font-medium mt-2">{p.label}</div>
+                    <div className="text-[10px] text-muted-foreground leading-tight">{p.description}</div>
                   </button>
                 );
               })}
             </div>
           </div>
+
 
           <div>
             <Label className="text-xs mb-2 block">Modo de etapas</Label>
