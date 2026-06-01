@@ -777,12 +777,12 @@ function EmptyCanvas({ onAdd }: { onAdd: (t: BlockType) => void }) {
 
 // ============ Inspector (Bloco / Estilo / Projeto) ============
 function Inspector({
-  selected, onUpdate, projectId: _projectId, onBlocksGenerated: _onBlocksGenerated, project,
+  selected, onUpdate, settings, onSettingsChange, project,
 }: {
   selected: Block | null;
   onUpdate: (patch: Partial<Block>) => void;
-  projectId: string;
-  onBlocksGenerated: (b: Block[]) => void;
+  settings: CanvasSettings;
+  onSettingsChange: (patch: Partial<CanvasSettings>) => void;
   project: any;
 }) {
   return (
@@ -793,7 +793,7 @@ function Inspector({
         <TabsTrigger value="project">Projeto</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="block" className="px-4 pb-4 flex-1 overflow-y-auto">
+      <TabsContent value="block" className="px-4 pb-4 flex-1 overflow-y-auto scroll-clean">
         {!selected ? (
           <div className="text-center py-12 text-sm text-muted-foreground">
             <MoreVertical className="mx-auto h-8 w-8 opacity-30 mb-3" />
@@ -829,18 +829,6 @@ function Inspector({
                 </div>
               </>
             )}
-          </div>
-        )}
-      </TabsContent>
-
-      <TabsContent value="style" className="px-4 pb-4 flex-1 overflow-y-auto">
-        {!selected ? (
-          <div className="text-center py-12 text-sm text-muted-foreground">
-            <Palette className="mx-auto h-8 w-8 opacity-30 mb-3" />
-            Selecione um bloco para personalizar a cor.
-          </div>
-        ) : (
-          <div className="space-y-4">
             <div>
               <Label className="text-xs mb-2 block">Cor de destaque</Label>
               <div className="grid grid-cols-4 gap-2">
@@ -859,22 +847,126 @@ function Inspector({
                   );
                 })}
               </div>
-            </div>
-            <div>
-              <Label className="text-xs">Cor personalizada (hex)</Label>
               <Input
                 type="color"
                 value={selected.color?.startsWith("#") ? selected.color : "#4f46e5"}
                 onChange={(e) => onUpdate({ color: e.target.value })}
-                className="h-10 mt-1 cursor-pointer"
+                className="h-9 mt-2 cursor-pointer"
               />
             </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              A cor aparece como faixa lateral no editor e como destaque do bloco na apresentação.
-            </p>
           </div>
         )}
       </TabsContent>
+
+      <TabsContent value="style" className="px-4 pb-4 flex-1 overflow-y-auto scroll-clean">
+        <div className="space-y-5">
+          <div>
+            <Label className="text-xs mb-2 block">Estilo do quiz</Label>
+            <div className="grid gap-2">
+              {LAYOUT_PRESETS.map((p) => {
+                const active = settings.layout === p.value;
+                return (
+                  <button
+                    key={p.value}
+                    onClick={() => onSettingsChange({ layout: p.value })}
+                    className={`text-left rounded-lg border-2 px-3 py-2 transition-smooth ${active ? "border-primary bg-primary/5" : "border-border hover:border-strong"}`}
+                  >
+                    <div className="text-sm font-medium">{p.label}</div>
+                    <div className="text-[11px] text-muted-foreground">{p.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs mb-2 block">Modo de etapas</Label>
+            <button
+              onClick={() => onSettingsChange({ stepMode: !settings.stepMode })}
+              className={`w-full rounded-lg border-2 px-3 py-2 text-left transition-smooth ${settings.stepMode ? "border-primary bg-primary/5" : "border-border hover:border-strong"}`}
+            >
+              <div className="text-sm font-medium flex items-center gap-2">
+                <Layers className="h-3.5 w-3.5" />
+                {settings.stepMode ? "Etapas ativadas" : "Etapas desativadas"}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                Use o bloco "Próximo" para dividir o quiz em páginas. O canvas mostra uma etapa por vez.
+              </div>
+            </button>
+          </div>
+
+          <div>
+            <Label className="text-xs mb-2 block">Largura do conteúdo</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["narrow", "comfortable", "wide"] as const).map((w) => (
+                <button
+                  key={w}
+                  onClick={() => onSettingsChange({ contentWidth: w })}
+                  className={`rounded-md border-2 py-2 text-xs font-medium capitalize ${settings.contentWidth === w ? "border-primary bg-primary/5" : "border-border"}`}
+                >
+                  {w === "narrow" ? "Estreita" : w === "wide" ? "Larga" : "Padrão"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs mb-2 block">Fundo do canvas</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {BACKGROUND_PRESETS.map((bg) => {
+                const active = settings.background === bg.value;
+                const isGradient = bg.value.startsWith("linear-") || bg.value.startsWith("radial-");
+                return (
+                  <button
+                    key={bg.label}
+                    onClick={() => onSettingsChange({ background: bg.value })}
+                    title={bg.label}
+                    className={`aspect-square rounded-lg border-2 transition-smooth relative overflow-hidden ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-strong"}`}
+                    style={isGradient ? { backgroundImage: bg.value } : { backgroundColor: bg.value || "transparent" }}
+                  >
+                    {!bg.value && <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">auto</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 grid grid-cols-[1fr_auto] gap-2 items-center">
+              <Input
+                value={settings.background}
+                onChange={(e) => onSettingsChange({ background: e.target.value })}
+                placeholder="cor ou linear-gradient(...)"
+                className="h-9 text-xs"
+              />
+              <Input
+                type="color"
+                value={settings.background.startsWith("#") ? settings.background : "#ffffff"}
+                onChange={(e) => onSettingsChange({ background: e.target.value })}
+                className="h-9 w-12 cursor-pointer p-1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs mb-2 block">Cor de destaque (acento)</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {BLOCK_COLORS.map((c) => {
+                const active = (settings.accent ?? "") === c.value;
+                return (
+                  <button
+                    key={c.label}
+                    onClick={() => onSettingsChange({ accent: c.value })}
+                    title={c.label}
+                    className={`aspect-square rounded-lg border-2 transition-smooth ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-strong"}`}
+                    style={{ background: c.value || "var(--muted)" }}
+                  >
+                    {!c.value && <span className="block text-[10px] text-muted-foreground">auto</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </TabsContent>
+
 
       <TabsContent value="project" className="px-4 pb-4 flex-1 overflow-y-auto">
         <div className="space-y-3 text-sm">
