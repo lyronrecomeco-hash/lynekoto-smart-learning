@@ -451,14 +451,102 @@ function InsertBetween({ onAdd }: { onAdd: (t: BlockType) => void }) {
 // ============ Block-specific editors ============
 function BlockEditor({ block, onUpdate }: { block: Block; onUpdate: (d: any) => void }) {
   switch (block.type) {
-    case "mcq": return <MCQEditor data={block.data} onUpdate={onUpdate} />;
-    case "tf": return <TFEditor data={block.data} onUpdate={onUpdate} />;
-    case "short": return <ShortEditor data={block.data} onUpdate={onUpdate} />;
-    case "text": return <TextEditor data={block.data} onUpdate={onUpdate} />;
-    case "media": return <MediaEditor data={block.data} onUpdate={onUpdate} />;
-    case "divider": return <DividerEditor data={block.data} onUpdate={onUpdate} />;
+    case "mcq":      return <MCQEditor data={block.data} onUpdate={onUpdate} />;
+    case "tf":       return <TFEditor data={block.data} onUpdate={onUpdate} />;
+    case "multi":    return <MultiEditor data={block.data} onUpdate={onUpdate} />;
+    case "short":    return <ShortEditor data={block.data} onUpdate={onUpdate} />;
+    case "long":     return <LongEditor data={block.data} onUpdate={onUpdate} />;
+    case "ordering": return <OrderingEditor data={block.data} onUpdate={onUpdate} />;
+    case "poll":     return <PollEditor data={block.data} onUpdate={onUpdate} />;
+    case "text":     return <TextEditor data={block.data} onUpdate={onUpdate} />;
+    case "quote":    return <QuoteEditor data={block.data} onUpdate={onUpdate} />;
+    case "media":    return <MediaEditor data={block.data} onUpdate={onUpdate} />;
+    case "divider":  return <DividerEditor data={block.data} onUpdate={onUpdate} />;
     default: return null;
   }
+}
+
+function MultiEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  const sel: number[] = data.correct_indices ?? [];
+  const toggle = (i: number) => {
+    const next = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i].sort();
+    onUpdate({ correct_indices: next });
+  };
+  return (
+    <div className="space-y-3">
+      <Textarea value={data.question ?? ""} onChange={(e) => onUpdate({ question: e.target.value })} placeholder="Pergunta (várias respostas corretas)..." className="border-0 bg-transparent text-base font-display font-medium resize-none focus-visible:bg-muted/30 px-2 min-h-[2.5rem]" rows={2} />
+      <div className="grid gap-2">
+        {(data.options ?? []).map((opt: string, idx: number) => (
+          <div key={idx} className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${sel.includes(idx) ? "border-success bg-success/5" : "border-border"}`}>
+            <button onClick={() => toggle(idx)} className={`flex h-5 w-5 items-center justify-center rounded border-2 ${sel.includes(idx) ? "border-success bg-success text-white" : "border-border"}`}>
+              {sel.includes(idx) && <CheckCircle2 className="h-3 w-3" />}
+            </button>
+            <span className="font-mono text-xs text-muted-foreground">{String.fromCharCode(65 + idx)}</span>
+            <Input value={opt} onChange={(e) => { const opts = [...(data.options ?? [])]; opts[idx] = e.target.value; onUpdate({ options: opts }); }} className="border-0 bg-transparent h-7 px-1" />
+          </div>
+        ))}
+        <Button variant="ghost" size="sm" onClick={() => onUpdate({ options: [...(data.options ?? []), ""] })}><Plus className="h-3 w-3 mr-1" /> Adicionar opção</Button>
+      </div>
+    </div>
+  );
+}
+
+function LongEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  return (
+    <div className="space-y-3">
+      <Textarea value={data.question ?? ""} onChange={(e) => onUpdate({ question: e.target.value })} placeholder="Enunciado dissertativo..." className="border-0 bg-transparent text-base font-display font-medium resize-none focus-visible:bg-muted/30 px-2" rows={3} />
+      <Textarea value={data.guidance ?? ""} onChange={(e) => onUpdate({ guidance: e.target.value })} placeholder="Orientações para correção (opcional)" rows={3} />
+    </div>
+  );
+}
+
+function OrderingEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  return (
+    <div className="space-y-3">
+      <Textarea value={data.question ?? ""} onChange={(e) => onUpdate({ question: e.target.value })} placeholder="Coloque os itens na ordem correta..." className="border-0 bg-transparent text-base font-display font-medium resize-none focus-visible:bg-muted/30 px-2" rows={2} />
+      <div className="grid gap-2">
+        {(data.items ?? []).map((it: string, idx: number) => (
+          <div key={idx} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+            <span className="font-mono text-xs font-semibold text-muted-foreground">{idx + 1}.</span>
+            <Input value={it} onChange={(e) => { const items = [...(data.items ?? [])]; items[idx] = e.target.value; onUpdate({ items }); }} className="border-0 bg-transparent h-7 px-1" />
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { const items = (data.items ?? []).filter((_: any, i: number) => i !== idx); onUpdate({ items }); }}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="ghost" size="sm" onClick={() => onUpdate({ items: [...(data.items ?? []), ""] })}><Plus className="h-3 w-3 mr-1" /> Adicionar item</Button>
+      </div>
+    </div>
+  );
+}
+
+function PollEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  return (
+    <div className="space-y-3">
+      <Textarea value={data.question ?? ""} onChange={(e) => onUpdate({ question: e.target.value })} placeholder="Pergunta da enquete (sem resposta correta)..." className="border-0 bg-transparent text-base font-display font-medium resize-none focus-visible:bg-muted/30 px-2" rows={2} />
+      <div className="grid gap-2">
+        {(data.options ?? []).map((opt: string, idx: number) => (
+          <div key={idx} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+            <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+            <Input value={opt} onChange={(e) => { const opts = [...(data.options ?? [])]; opts[idx] = e.target.value; onUpdate({ options: opts }); }} placeholder={`Opção ${idx + 1}`} className="border-0 bg-transparent h-7 px-1" />
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { const opts = (data.options ?? []).filter((_: any, i: number) => i !== idx); onUpdate({ options: opts }); }}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="ghost" size="sm" onClick={() => onUpdate({ options: [...(data.options ?? []), ""] })}><Plus className="h-3 w-3 mr-1" /> Adicionar opção</Button>
+      </div>
+    </div>
+  );
+}
+
+function QuoteEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  return (
+    <div className="space-y-2 border-l-4 border-primary/40 pl-3">
+      <Textarea value={data.content ?? ""} onChange={(e) => onUpdate({ content: e.target.value })} placeholder="Citação ou destaque..." className="border-0 bg-transparent italic resize-none focus-visible:bg-muted/30 px-2" rows={2} />
+      <Input value={data.author ?? ""} onChange={(e) => onUpdate({ author: e.target.value })} placeholder="— Autor (opcional)" className="border-0 bg-transparent text-xs text-muted-foreground" />
+    </div>
+  );
 }
 
 function MCQEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
