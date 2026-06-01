@@ -219,6 +219,7 @@ function CanvasEditor() {
   }
 
   return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
     <div className="flex flex-col bg-canvas h-[calc(100vh-3.5rem)]">
       {/* Top toolbar */}
       <header className="flex h-12 flex-shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
@@ -257,19 +258,12 @@ function CanvasEditor() {
               {(Object.keys(BLOCK_DEFS) as BlockType[]).map((t) => {
                 const def = BLOCK_DEFS[t];
                 return (
-                  <button
+                  <PaletteBlockButton
                     key={t}
+                    type={t}
+                    def={def}
                     onClick={() => addBlock(t)}
-                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-left text-sm hover:border-primary/50 hover:bg-accent/40 transition-smooth group"
-                  >
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-smooth">
-                      <def.icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-medium leading-tight">{def.label}</div>
-                      <div className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">{def.description}</div>
-                    </div>
-                  </button>
+                  />
                 );
               })}
             </div>
@@ -282,7 +276,7 @@ function CanvasEditor() {
             {blocks.length === 0 ? (
               <EmptyCanvas onAdd={addBlock} />
             ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <CanvasDropZone>
                 <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-3">
                     {blocks.map((b, i) => (
@@ -300,7 +294,7 @@ function CanvasEditor() {
                     ))}
                   </div>
                 </SortableContext>
-              </DndContext>
+              </CanvasDropZone>
             )}
           </div>
         </div>
@@ -317,6 +311,7 @@ function CanvasEditor() {
         </aside>
       </div>
     </div>
+    </DndContext>
   );
 }
 
