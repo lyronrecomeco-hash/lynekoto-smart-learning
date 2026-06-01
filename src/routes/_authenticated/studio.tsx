@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -20,8 +20,13 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/studio")({
   head: () => ({ meta: [{ title: "Studio — LyneKoto" }] }),
-  component: StudioList,
+  component: StudioRouteShell,
 });
+
+function StudioRouteShell() {
+  const isCanvas = useRouterState({ select: (r) => r.location.pathname.startsWith("/studio/") });
+  return isCanvas ? <Outlet /> : <StudioList />;
+}
 
 const COVERS = [
   "linear-gradient(135deg, oklch(0.32 0.08 268), oklch(0.42 0.10 282))",
@@ -31,6 +36,33 @@ const COVERS = [
   "linear-gradient(135deg, oklch(0.22 0.02 260), oklch(0.30 0.03 270))",
   "linear-gradient(135deg, oklch(0.32 0.06 320), oklch(0.40 0.07 340))",
 ];
+
+function makeBlockId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `block-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function createStarterQuizBlocks(projectTitle: string) {
+  return [
+    {
+      id: makeBlockId(),
+      type: "text",
+      data: { content: `Abertura do quiz: ${projectTitle}. Ajuste aqui o contexto, objetivo e instruções para os alunos.` },
+    },
+    {
+      id: makeBlockId(),
+      type: "mcq",
+      data: {
+        question: "Digite aqui a primeira pergunta do quiz",
+        options: ["Alternativa A", "Alternativa B", "Alternativa C", "Alternativa D"],
+        correct_index: 0,
+        explanation: "Explique por que esta alternativa é a correta.",
+      },
+      points: 10,
+      time_limit: 30,
+    },
+  ];
+}
 
 function StudioList() {
   const navigate = useNavigate();
@@ -58,13 +90,14 @@ function StudioList() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Sessão expirada"); return; }
     const cover = COVERS[Math.floor(Math.random() * COVERS.length)];
+    const starterQuestions = payload.activity_type === "quiz" ? createStarterQuizBlocks(payload.title) : [];
     const { data, error } = await supabase.from("activities").insert({
       owner_id: user.id,
       title: payload.title,
       subject: payload.subject || null,
       grade: payload.grade || null,
       activity_type: payload.activity_type,
-      questions: [],
+      questions: starterQuestions,
       status: "draft",
       cover_color: cover,
     } as any).select().single();
@@ -74,7 +107,7 @@ function StudioList() {
     await qc.invalidateQueries({ queryKey: ["studio-projects"] });
     // Pre-seed the canvas query so the editor opens without a blank flash
     qc.setQueryData(["studio-project", data.id], data);
-    navigate({ to: "/studio/$id", params: { id: data.id } });
+    await navigate({ to: "/studio/$id", params: { id: data.id } });
   };
 
   const duplicate = async (p: any) => {

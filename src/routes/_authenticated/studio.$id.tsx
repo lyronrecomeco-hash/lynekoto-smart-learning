@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
-  useSensor, useSensors, type DragEndEvent,
+  useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext, arrayMove, sortableKeyboardCoordinates,
@@ -76,9 +76,12 @@ const BLOCK_DEFS: Record<BlockType, { label: string; icon: any; description: str
 // ============ Component ============
 function CanvasEditor() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["studio-project", id],
+    initialData: () => queryClient.getQueryData(["studio-project", id]),
+    enabled: typeof window !== "undefined",
     queryFn: async () => {
       const { data, error } = await supabase.from("activities").select("*").eq("id", id).single();
       if (error) throw error;
@@ -106,6 +109,7 @@ function CanvasEditor() {
         }
       );
       setBlocks(normalized);
+      setSelectedId(normalized[0]?.id ?? null);
       setHydrated(true);
     }
   }, [project, hydrated]);
@@ -126,14 +130,16 @@ function CanvasEditor() {
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
 
   // ===== Mutations =====
-  const addBlock = (type: BlockType, atIndex?: number) => {
-    const block: Block = {
+  const createBlock = (type: BlockType): Block => ({
       id: genId(),
       type,
       data: BLOCK_DEFS[type].make(),
       points: type === "mcq" || type === "tf" || type === "short" ? 10 : undefined,
       time_limit: type === "mcq" || type === "tf" ? 30 : undefined,
-    };
+  });
+
+  const addBlock = (type: BlockType, atIndex?: number) => {
+    const block = createBlock(type);
     setBlocks((prev) => {
       if (atIndex === undefined || atIndex >= prev.length) return [...prev, block];
       const copy = [...prev];
@@ -165,10 +171,27 @@ function CanvasEditor() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
+    const activeId = String(active.id);
+    const overId = over ? String(over.id) : null;
+    if (activeId.startsWith("palette:")) {
+      const type = activeId.replace("palette:", "") as BlockType;
+      const block = createBlock(type);
+      setBlocks((items) => {
+        if (!overId || overId === "canvas-dropzone") return [...items, block];
+        const idx = items.findIndex((b) => b.id === overId);
+        if (idx === -1) return [...items, block];
+        const copy = [...items];
+        copy.splice(idx, 0, block);
+        return copy;
+      });
+      setSelectedId(block.id);
+      return;
+    }
     if (!over || active.id === over.id) return;
     setBlocks((items) => {
       const oldIdx = items.findIndex((b) => b.id === active.id);
       const newIdx = items.findIndex((b) => b.id === over.id);
+      if (oldIdx === -1 || newIdx === -1) return items;
       return arrayMove(items, oldIdx, newIdx);
     });
   };
@@ -196,6 +219,7 @@ function CanvasEditor() {
   }
 
   return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
     <div className="flex flex-col bg-canvas h-[calc(100vh-3.5rem)]">
       {/* Top toolbar */}
       <header className="flex h-12 flex-shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
@@ -234,19 +258,12 @@ function CanvasEditor() {
               {(Object.keys(BLOCK_DEFS) as BlockType[]).map((t) => {
                 const def = BLOCK_DEFS[t];
                 return (
-                  <button
+                  <PaletteBlockButton
                     key={t}
+                    type={t}
+                    def={def}
                     onClick={() => addBlock(t)}
-                    className="w-full flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-left text-sm hover:border-primary/50 hover:bg-accent/40 transition-smooth group"
-                  >
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-smooth">
-                      <def.icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-medium leading-tight">{def.label}</div>
-                      <div className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">{def.description}</div>
-                    </div>
-                  </button>
+                  />
                 );
               })}
             </div>
@@ -257,9 +274,11 @@ function CanvasEditor() {
         <div className="flex-1 overflow-y-auto bg-dots" onClick={() => setSelectedId(null)}>
           <div className="mx-auto max-w-3xl py-10 px-6">
             {blocks.length === 0 ? (
-              <EmptyCanvas onAdd={addBlock} />
+              <CanvasDropZone>
+                <EmptyCanvas onAdd={addBlock} />
+              </CanvasDropZone>
             ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <CanvasDropZone>
                 <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-3">
                     {blocks.map((b, i) => (
@@ -277,7 +296,7 @@ function CanvasEditor() {
                     ))}
                   </div>
                 </SortableContext>
-              </DndContext>
+              </CanvasDropZone>
             )}
           </div>
         </div>
@@ -294,6 +313,7 @@ function CanvasEditor() {
         </aside>
       </div>
     </div>
+    </DndContext>
   );
 }
 
@@ -303,6 +323,39 @@ function SaveIndicator({ status }: { status: string }) {
   if (status === "saved") return <span className="flex items-center gap-1.5 text-xs text-success"><CheckCircle2 className="h-3 w-3" /> Salvo</span>;
   if (status === "error") return <span className="text-xs text-destructive">Erro ao salvar</span>;
   return <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Save className="h-3 w-3" /> Sincronizado</span>;
+}
+
+function PaletteBlockButton({ type, def, onClick }: { type: BlockType; def: (typeof BLOCK_DEFS)[BlockType]; onClick: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `palette:${type}` });
+  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.65 : 1, zIndex: isDragging ? 50 : undefined };
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
+      className="w-full flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-left text-sm hover:border-primary/50 hover:bg-accent/40 transition-smooth group cursor-grab active:cursor-grabbing"
+    >
+      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-smooth">
+        <def.icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <div className="font-medium leading-tight">{def.label}</div>
+        <div className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">{def.description}</div>
+      </div>
+    </button>
+  );
+}
+
+function CanvasDropZone({ children }: { children: ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({ id: "canvas-dropzone" });
+  return (
+    <div ref={setNodeRef} className={`min-h-[32rem] rounded-2xl border border-dashed p-3 transition-smooth ${isOver ? "border-primary bg-primary/5" : "border-transparent"}`}>
+      {children}
+    </div>
+  );
 }
 
 // ============ Sortable Block wrapper ============
