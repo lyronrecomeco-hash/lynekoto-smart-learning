@@ -301,7 +301,7 @@ function CanvasEditor() {
   const layoutClass =
     settings.layout === "cards" ? "canvas-layout-cards" :
     settings.layout === "list" ? "canvas-layout-list" :
-    settings.layout === "compact" ? "canvas-layout-compact" : "";
+    settings.layout === "compact" ? "canvas-layout-compact" : "canvas-layout-stack";
 
   const canvasBgStyle: React.CSSProperties = settings.background
     ? (settings.background.startsWith("linear-") || settings.background.startsWith("radial-")
