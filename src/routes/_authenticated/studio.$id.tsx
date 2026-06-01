@@ -76,8 +76,6 @@ const BLOCK_DEFS: Record<BlockType, { label: string; icon: any; description: str
 // ============ Component ============
 function CanvasEditor() {
   const { id } = Route.useParams();
-  const navigate = useNavigate();
-  const { theme } = useTheme();
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["studio-project", id],
