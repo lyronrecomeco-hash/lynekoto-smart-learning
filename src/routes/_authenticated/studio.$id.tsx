@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+// AI panel removed per request
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -22,10 +22,10 @@ import { toast } from "sonner";
 import {
   ArrowLeft, CheckCircle2, CircleDot, Type, Image as ImageIcon, Minus,
   ListChecks, MessageSquare, GripVertical, Plus, Trash2, Copy, Play,
-  Sparkles, Wand2, Loader2, Save, MoreVertical, Settings2,
+  Loader2, Save, MoreVertical, Settings2, Palette, BarChart3,
+  ArrowDownUp, AlignLeft, PenLine, Quote,
 } from "lucide-react";
 import { useAutosave } from "@/hooks/use-autosave";
-import { generateBlocks } from "@/lib/activities.functions";
 
 
 export const Route = createFileRoute("/_authenticated/studio/$id")({
@@ -55,23 +55,40 @@ function genId() {
 }
 
 // ============ Block types ============
-type BlockType = "mcq" | "tf" | "short" | "text" | "divider" | "media";
+type BlockType = "mcq" | "tf" | "multi" | "short" | "long" | "ordering" | "poll" | "text" | "quote" | "divider" | "media";
 interface Block {
   id: string;
   type: BlockType;
   data: any;
   points?: number;
   time_limit?: number;
+  color?: string; // hex / oklch / css color for block accent
 }
 
 const BLOCK_DEFS: Record<BlockType, { label: string; icon: any; description: string; make: () => Block["data"] }> = {
-  mcq: { label: "Múltipla Escolha", icon: ListChecks, description: "4 alternativas, 1 correta", make: () => ({ question: "", options: ["", "", "", ""], correct_index: 0, explanation: "" }) },
-  tf: { label: "Verdadeiro / Falso", icon: CircleDot, description: "Pergunta binária", make: () => ({ question: "", correct: true, explanation: "" }) },
-  short: { label: "Resposta curta", icon: MessageSquare, description: "Texto livre", make: () => ({ question: "", answer: "", explanation: "" }) },
-  text: { label: "Instrução", icon: Type, description: "Texto explicativo", make: () => ({ content: "" }) },
-  media: { label: "Mídia", icon: ImageIcon, description: "Imagem por URL", make: () => ({ url: "", caption: "" }) },
-  divider: { label: "Seção", icon: Minus, description: "Separador de seção", make: () => ({ label: "Nova seção" }) },
+  mcq:      { label: "Múltipla Escolha", icon: ListChecks,  description: "4 alternativas, 1 correta",   make: () => ({ question: "", options: ["", "", "", ""], correct_index: 0, explanation: "" }) },
+  tf:       { label: "Verdadeiro / Falso", icon: CircleDot, description: "Pergunta binária",            make: () => ({ question: "", correct: true, explanation: "" }) },
+  multi:    { label: "Múltipla resposta", icon: CheckCircle2, description: "Várias corretas",           make: () => ({ question: "", options: ["", "", "", ""], correct_indices: [0], explanation: "" }) },
+  short:    { label: "Resposta curta",   icon: MessageSquare, description: "Texto livre — 1 linha",     make: () => ({ question: "", answer: "", explanation: "" }) },
+  long:     { label: "Dissertativa",     icon: AlignLeft,    description: "Resposta longa, sem gabarito", make: () => ({ question: "", guidance: "" }) },
+  ordering: { label: "Ordenação",        icon: ArrowDownUp,  description: "Coloque na ordem correta",   make: () => ({ question: "", items: ["", "", ""], explanation: "" }) },
+  poll:     { label: "Enquete",          icon: BarChart3,    description: "Sem resposta correta",       make: () => ({ question: "", options: ["", ""] }) },
+  text:     { label: "Instrução",        icon: Type,         description: "Texto explicativo",          make: () => ({ content: "" }) },
+  quote:    { label: "Destaque",         icon: Quote,        description: "Citação ou aviso",           make: () => ({ content: "", author: "" }) },
+  media:    { label: "Mídia",            icon: ImageIcon,    description: "Imagem por URL",             make: () => ({ url: "", caption: "" }) },
+  divider:  { label: "Seção",            icon: Minus,        description: "Separador",                   make: () => ({ label: "Nova seção" }) },
 };
+
+const BLOCK_COLORS = [
+  { label: "Padrão",   value: "" },
+  { label: "Indigo",   value: "oklch(0.55 0.18 268)" },
+  { label: "Esmeralda", value: "oklch(0.55 0.14 158)" },
+  { label: "Âmbar",    value: "oklch(0.72 0.15 70)" },
+  { label: "Carmesim", value: "oklch(0.58 0.20 25)" },
+  { label: "Ardósia",  value: "oklch(0.48 0.03 260)" },
+  { label: "Musgo",    value: "oklch(0.5 0.07 145)" },
+  { label: "Terracota", value: "oklch(0.6 0.13 40)" },
+];
 
 // ============ Component ============
 function CanvasEditor() {
@@ -375,9 +392,10 @@ function SortableBlock({
     <div ref={setNodeRef} style={style} className="group/block relative">
       <div
         onClick={onSelect}
-        className={`rounded-xl border-2 bg-surface transition-smooth cursor-pointer ${
+        className={`rounded-xl border-2 bg-surface transition-smooth cursor-pointer overflow-hidden ${
           selected ? "border-primary shadow-soft" : "border-border hover:border-strong"
         }`}
+        style={block.color ? { borderLeftWidth: 5, borderLeftColor: block.color } : undefined}
       >
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
           <button {...attributes} {...listeners} className="text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
@@ -410,7 +428,7 @@ function InsertBetween({ onAdd }: { onAdd: (t: BlockType) => void }) {
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-center">
         {open ? (
           <div className="flex items-center gap-1 rounded-full border border-border bg-surface shadow-soft p-1 z-10">
-            {(["mcq", "tf", "short", "text", "divider"] as BlockType[]).map((t) => {
+            {(["mcq", "tf", "multi", "short", "ordering", "poll", "text", "media", "divider"] as BlockType[]).map((t) => {
               const D = BLOCK_DEFS[t];
               return (
                 <button key={t} onClick={() => { onAdd(t); setOpen(false); }} title={D.label}
@@ -433,14 +451,102 @@ function InsertBetween({ onAdd }: { onAdd: (t: BlockType) => void }) {
 // ============ Block-specific editors ============
 function BlockEditor({ block, onUpdate }: { block: Block; onUpdate: (d: any) => void }) {
   switch (block.type) {
-    case "mcq": return <MCQEditor data={block.data} onUpdate={onUpdate} />;
-    case "tf": return <TFEditor data={block.data} onUpdate={onUpdate} />;
-    case "short": return <ShortEditor data={block.data} onUpdate={onUpdate} />;
-    case "text": return <TextEditor data={block.data} onUpdate={onUpdate} />;
-    case "media": return <MediaEditor data={block.data} onUpdate={onUpdate} />;
-    case "divider": return <DividerEditor data={block.data} onUpdate={onUpdate} />;
+    case "mcq":      return <MCQEditor data={block.data} onUpdate={onUpdate} />;
+    case "tf":       return <TFEditor data={block.data} onUpdate={onUpdate} />;
+    case "multi":    return <MultiEditor data={block.data} onUpdate={onUpdate} />;
+    case "short":    return <ShortEditor data={block.data} onUpdate={onUpdate} />;
+    case "long":     return <LongEditor data={block.data} onUpdate={onUpdate} />;
+    case "ordering": return <OrderingEditor data={block.data} onUpdate={onUpdate} />;
+    case "poll":     return <PollEditor data={block.data} onUpdate={onUpdate} />;
+    case "text":     return <TextEditor data={block.data} onUpdate={onUpdate} />;
+    case "quote":    return <QuoteEditor data={block.data} onUpdate={onUpdate} />;
+    case "media":    return <MediaEditor data={block.data} onUpdate={onUpdate} />;
+    case "divider":  return <DividerEditor data={block.data} onUpdate={onUpdate} />;
     default: return null;
   }
+}
+
+function MultiEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  const sel: number[] = data.correct_indices ?? [];
+  const toggle = (i: number) => {
+    const next = sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i].sort();
+    onUpdate({ correct_indices: next });
+  };
+  return (
+    <div className="space-y-3">
+      <Textarea value={data.question ?? ""} onChange={(e) => onUpdate({ question: e.target.value })} placeholder="Pergunta (várias respostas corretas)..." className="border-0 bg-transparent text-base font-display font-medium resize-none focus-visible:bg-muted/30 px-2 min-h-[2.5rem]" rows={2} />
+      <div className="grid gap-2">
+        {(data.options ?? []).map((opt: string, idx: number) => (
+          <div key={idx} className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${sel.includes(idx) ? "border-success bg-success/5" : "border-border"}`}>
+            <button onClick={() => toggle(idx)} className={`flex h-5 w-5 items-center justify-center rounded border-2 ${sel.includes(idx) ? "border-success bg-success text-white" : "border-border"}`}>
+              {sel.includes(idx) && <CheckCircle2 className="h-3 w-3" />}
+            </button>
+            <span className="font-mono text-xs text-muted-foreground">{String.fromCharCode(65 + idx)}</span>
+            <Input value={opt} onChange={(e) => { const opts = [...(data.options ?? [])]; opts[idx] = e.target.value; onUpdate({ options: opts }); }} className="border-0 bg-transparent h-7 px-1" />
+          </div>
+        ))}
+        <Button variant="ghost" size="sm" onClick={() => onUpdate({ options: [...(data.options ?? []), ""] })}><Plus className="h-3 w-3 mr-1" /> Adicionar opção</Button>
+      </div>
+    </div>
+  );
+}
+
+function LongEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  return (
+    <div className="space-y-3">
+      <Textarea value={data.question ?? ""} onChange={(e) => onUpdate({ question: e.target.value })} placeholder="Enunciado dissertativo..." className="border-0 bg-transparent text-base font-display font-medium resize-none focus-visible:bg-muted/30 px-2" rows={3} />
+      <Textarea value={data.guidance ?? ""} onChange={(e) => onUpdate({ guidance: e.target.value })} placeholder="Orientações para correção (opcional)" rows={3} />
+    </div>
+  );
+}
+
+function OrderingEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  return (
+    <div className="space-y-3">
+      <Textarea value={data.question ?? ""} onChange={(e) => onUpdate({ question: e.target.value })} placeholder="Coloque os itens na ordem correta..." className="border-0 bg-transparent text-base font-display font-medium resize-none focus-visible:bg-muted/30 px-2" rows={2} />
+      <div className="grid gap-2">
+        {(data.items ?? []).map((it: string, idx: number) => (
+          <div key={idx} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+            <span className="font-mono text-xs font-semibold text-muted-foreground">{idx + 1}.</span>
+            <Input value={it} onChange={(e) => { const items = [...(data.items ?? [])]; items[idx] = e.target.value; onUpdate({ items }); }} className="border-0 bg-transparent h-7 px-1" />
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { const items = (data.items ?? []).filter((_: any, i: number) => i !== idx); onUpdate({ items }); }}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="ghost" size="sm" onClick={() => onUpdate({ items: [...(data.items ?? []), ""] })}><Plus className="h-3 w-3 mr-1" /> Adicionar item</Button>
+      </div>
+    </div>
+  );
+}
+
+function PollEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  return (
+    <div className="space-y-3">
+      <Textarea value={data.question ?? ""} onChange={(e) => onUpdate({ question: e.target.value })} placeholder="Pergunta da enquete (sem resposta correta)..." className="border-0 bg-transparent text-base font-display font-medium resize-none focus-visible:bg-muted/30 px-2" rows={2} />
+      <div className="grid gap-2">
+        {(data.options ?? []).map((opt: string, idx: number) => (
+          <div key={idx} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+            <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+            <Input value={opt} onChange={(e) => { const opts = [...(data.options ?? [])]; opts[idx] = e.target.value; onUpdate({ options: opts }); }} placeholder={`Opção ${idx + 1}`} className="border-0 bg-transparent h-7 px-1" />
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { const opts = (data.options ?? []).filter((_: any, i: number) => i !== idx); onUpdate({ options: opts }); }}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="ghost" size="sm" onClick={() => onUpdate({ options: [...(data.options ?? []), ""] })}><Plus className="h-3 w-3 mr-1" /> Adicionar opção</Button>
+      </div>
+    </div>
+  );
+}
+
+function QuoteEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
+  return (
+    <div className="space-y-2 border-l-4 border-primary/40 pl-3">
+      <Textarea value={data.content ?? ""} onChange={(e) => onUpdate({ content: e.target.value })} placeholder="Citação ou destaque..." className="border-0 bg-transparent italic resize-none focus-visible:bg-muted/30 px-2" rows={2} />
+      <Input value={data.author ?? ""} onChange={(e) => onUpdate({ author: e.target.value })} placeholder="— Autor (opcional)" className="border-0 bg-transparent text-xs text-muted-foreground" />
+    </div>
+  );
 }
 
 function MCQEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => void }) {
@@ -527,23 +633,26 @@ function DividerEditor({ data, onUpdate }: { data: any; onUpdate: (d: any) => vo
 function EmptyCanvas({ onAdd }: { onAdd: (t: BlockType) => void }) {
   return (
     <div className="rounded-2xl border-2 border-dashed border-border bg-surface/60 p-12 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary shadow-glow">
-        <Sparkles className="h-6 w-6 text-primary-foreground" />
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+        <PenLine className="h-6 w-6" />
       </div>
       <h3 className="mt-5 font-display text-xl font-semibold">Canvas vazio</h3>
-      <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">Arraste um bloco da paleta ou comece pelos atalhos abaixo. Use a aba IA para gerar questões automaticamente.</p>
+      <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
+        Arraste um bloco da paleta ao lado ou comece pelos atalhos abaixo.
+      </p>
       <div className="mt-6 flex flex-wrap gap-2 justify-center">
         <Button variant="outline" onClick={() => onAdd("mcq")}><Plus className="mr-1.5 h-3.5 w-3.5" /> Múltipla Escolha</Button>
         <Button variant="outline" onClick={() => onAdd("tf")}><Plus className="mr-1.5 h-3.5 w-3.5" /> V / F</Button>
+        <Button variant="outline" onClick={() => onAdd("ordering")}><Plus className="mr-1.5 h-3.5 w-3.5" /> Ordenação</Button>
         <Button variant="outline" onClick={() => onAdd("text")}><Plus className="mr-1.5 h-3.5 w-3.5" /> Instrução</Button>
       </div>
     </div>
   );
 }
 
-// ============ Inspector ============
+// ============ Inspector (Bloco / Estilo / Projeto) ============
 function Inspector({
-  selected, onUpdate, projectId, onBlocksGenerated, project,
+  selected, onUpdate, projectId: _projectId, onBlocksGenerated: _onBlocksGenerated, project,
 }: {
   selected: Block | null;
   onUpdate: (patch: Partial<Block>) => void;
@@ -555,8 +664,8 @@ function Inspector({
     <Tabs defaultValue="block" className="h-full flex flex-col">
       <TabsList className="grid grid-cols-3 m-3">
         <TabsTrigger value="block"><Settings2 className="h-3.5 w-3.5 mr-1" /> Bloco</TabsTrigger>
+        <TabsTrigger value="style"><Palette className="h-3.5 w-3.5 mr-1" /> Estilo</TabsTrigger>
         <TabsTrigger value="project">Projeto</TabsTrigger>
-        <TabsTrigger value="ai"><Sparkles className="h-3.5 w-3.5 mr-1" /> IA</TabsTrigger>
       </TabsList>
 
       <TabsContent value="block" className="px-4 pb-4 flex-1 overflow-y-auto">
@@ -571,7 +680,7 @@ function Inspector({
               <Label className="text-xs">Tipo</Label>
               <div className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">{BLOCK_DEFS[selected.type].label}</div>
             </div>
-            {(selected.type === "mcq" || selected.type === "tf" || selected.type === "short") && (
+            {(selected.type === "mcq" || selected.type === "tf" || selected.type === "multi" || selected.type === "short" || selected.type === "ordering") && (
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -599,6 +708,49 @@ function Inspector({
         )}
       </TabsContent>
 
+      <TabsContent value="style" className="px-4 pb-4 flex-1 overflow-y-auto">
+        {!selected ? (
+          <div className="text-center py-12 text-sm text-muted-foreground">
+            <Palette className="mx-auto h-8 w-8 opacity-30 mb-3" />
+            Selecione um bloco para personalizar a cor.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs mb-2 block">Cor de destaque</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {BLOCK_COLORS.map((c) => {
+                  const active = (selected.color ?? "") === c.value;
+                  return (
+                    <button
+                      key={c.label}
+                      onClick={() => onUpdate({ color: c.value })}
+                      title={c.label}
+                      className={`group relative aspect-square rounded-lg border-2 transition-smooth ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-strong"}`}
+                      style={{ background: c.value || "var(--muted)" }}
+                    >
+                      {!c.value && <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">auto</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Cor personalizada (hex)</Label>
+              <Input
+                type="color"
+                value={selected.color?.startsWith("#") ? selected.color : "#4f46e5"}
+                onChange={(e) => onUpdate({ color: e.target.value })}
+                className="h-10 mt-1 cursor-pointer"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              A cor aparece como faixa lateral no editor e como destaque do bloco na apresentação.
+            </p>
+          </div>
+        )}
+      </TabsContent>
+
       <TabsContent value="project" className="px-4 pb-4 flex-1 overflow-y-auto">
         <div className="space-y-3 text-sm">
           <Row label="Matéria" value={project.subject ?? "—"} />
@@ -607,10 +759,6 @@ function Inspector({
           <Row label="Criado em" value={new Date(project.created_at).toLocaleDateString("pt-BR")} />
           <Row label="Última edição" value={new Date(project.updated_at).toLocaleString("pt-BR")} />
         </div>
-      </TabsContent>
-
-      <TabsContent value="ai" className="px-4 pb-4 flex-1 overflow-y-auto">
-        <AIPanel projectId={projectId} project={project} onGenerated={onBlocksGenerated} />
       </TabsContent>
     </Tabs>
   );
@@ -625,61 +773,3 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AIPanel({ projectId, project, onGenerated }: { projectId: string; project: any; onGenerated: (b: Block[]) => void }) {
-  const fn = useServerFn(generateBlocks);
-  const [topic, setTopic] = useState("");
-  const [count, setCount] = useState(5);
-  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
-  const [loading, setLoading] = useState(false);
-
-  const handle = async () => {
-    if (!topic.trim()) { toast.error("Informe o tema"); return; }
-    setLoading(true);
-    try {
-      const res = await fn({ data: { topic, count, difficulty, subject: project.subject ?? "", grade: project.grade ?? "" } });
-      onGenerated(res.blocks);
-      toast.success(`${res.blocks.length} blocos adicionados!`);
-      setTopic("");
-    } catch (err: any) { toast.error(err.message ?? "Erro ao gerar"); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 to-transparent p-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Wand2 className="h-4 w-4 text-primary" />
-          <span className="font-display font-semibold text-sm">Gerar com IA</span>
-        </div>
-        <p className="text-xs text-muted-foreground">Descreva um tema e a IA pedagógica adiciona blocos prontos ao canvas.</p>
-      </div>
-
-      <div>
-        <Label className="text-xs">Tema</Label>
-        <Textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex.: Frações equivalentes com exemplos do cotidiano" rows={3} className="mt-1 text-sm" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label className="text-xs">Questões</Label>
-          <Input type="number" min={1} max={20} value={count} onChange={(e) => setCount(parseInt(e.target.value) || 5)} className="h-9 mt-1" />
-        </div>
-        <div>
-          <Label className="text-xs">Dificuldade</Label>
-          <Select value={difficulty} onValueChange={(v: any) => setDifficulty(v)}>
-            <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="easy">Fácil</SelectItem>
-              <SelectItem value="medium">Médio</SelectItem>
-              <SelectItem value="hard">Difícil</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <Button disabled={loading} onClick={handle} className="w-full bg-gradient-primary">
-        {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando...</> : <><Sparkles className="mr-2 h-4 w-4" /> Gerar blocos</>}
-      </Button>
-    </div>
-  );
-}

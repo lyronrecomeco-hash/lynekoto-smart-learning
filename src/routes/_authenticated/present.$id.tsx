@@ -1,14 +1,43 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, X, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, X, ScanLine, Eye, EyeOff, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/present/$id")({
   head: () => ({ meta: [{ title: "Apresentando — LyneKoto" }] }),
   component: Present,
+  errorComponent: ({ error, reset }) => (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-10 text-center text-foreground">
+      <h2 className="font-display text-xl font-semibold">Não foi possível apresentar</h2>
+      <p className="max-w-md text-sm text-muted-foreground">{error.message}</p>
+      <div className="flex gap-2">
+        <Button onClick={reset} size="sm">Tentar novamente</Button>
+        <Button asChild size="sm" variant="outline"><Link to="/studio">Voltar ao Studio</Link></Button>
+      </div>
+    </div>
+  ),
 });
+
+type AnyBlock = any;
+
+/** Normalize legacy + new block formats into a single shape. */
+function normalize(blocks: AnyBlock[]) {
+  return (blocks ?? [])
+    .map((b) => {
+      // New canvas format: { id, type, data: {...} }
+      if (b && typeof b === "object" && b.type && b.data) {
+        return { type: b.type, ...b.data };
+      }
+      // Legacy mcq directly { question, options, correct_index, explanation }
+      if (b && b.options && Array.isArray(b.options)) {
+        return { type: "mcq", ...b };
+      }
+      return b;
+    })
+    .filter((b) => b && (b.type === "mcq" || b.type === "tf" || b.type === "short" || b.type === "poll" || b.type === "multi"));
+}
 
 function Present() {
   const { id } = Route.useParams();
@@ -16,76 +45,148 @@ function Present() {
   const [idx, setIdx] = useState(0);
   const [reveal, setReveal] = useState(false);
 
-  const { data: activity } = useQuery({
+  const { data: activity, isLoading } = useQuery({
     queryKey: ["activity", id],
     queryFn: async () => {
-      const { data } = await supabase.from("activities").select("*").eq("id", id).single();
+      const { data, error } = await supabase.from("activities").select("*").eq("id", id).single();
+      if (error) throw error;
       return data;
     },
+    enabled: typeof window !== "undefined",
   });
 
-  if (!activity) return <div className="flex min-h-screen items-center justify-center text-white bg-gradient-hero">Carregando...</div>;
+  const questions = useMemo(() => normalize((activity?.questions as any[]) ?? []), [activity]);
 
-  const questions = (activity.questions as any[]) ?? [];
+  // keyboard nav
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") setIdx((i) => Math.min(questions.length - 1, i + 1));
+      if (e.key === "ArrowLeft") setIdx((i) => Math.max(0, i - 1));
+      if (e.key === " ") { e.preventDefault(); setReveal((r) => !r); }
+      if (e.key === "Escape") navigate({ to: "/studio" });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [questions.length, navigate]);
+
+  if (isLoading || !activity) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-10 text-center">
+        <h2 className="font-display text-xl font-semibold">Nenhuma pergunta para apresentar</h2>
+        <p className="max-w-md text-sm text-muted-foreground">Volte ao Studio e adicione blocos de pergunta (múltipla escolha, V/F, resposta curta).</p>
+        <Button asChild><Link to="/studio/$id" params={{ id }}>Editar projeto</Link></Button>
+      </div>
+    );
+  }
+
   const q = questions[idx];
   const last = idx === questions.length - 1;
+  const options: string[] = q.options ?? (q.type === "tf" ? ["Verdadeiro", "Falso"] : []);
+  const correctIdx: number =
+    q.correct_index !== undefined
+      ? q.correct_index
+      : q.type === "tf"
+        ? (q.correct ? 0 : 1)
+        : -1;
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-hero text-white overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-mesh opacity-30" />
-
-      <header className="relative z-10 flex items-center justify-between p-6">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground">
+      <header className="flex items-center justify-between border-b border-border bg-surface px-6 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 backdrop-blur"><Sparkles className="h-4 w-4" /></div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground font-display text-sm font-bold">
+            {String(idx + 1).padStart(2, "0")}
+          </div>
           <div>
-            <div className="text-xs text-white/60 uppercase tracking-wider">{activity.subject} · {activity.grade}</div>
-            <div className="font-display font-semibold">{activity.title}</div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              {activity.subject ?? "—"} · {activity.grade ?? "—"}
+            </div>
+            <div className="font-display font-semibold leading-tight">{activity.title}</div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium backdrop-blur">
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link to="/scan"><ScanLine className="mr-1.5 h-3.5 w-3.5" /> Coletar respostas</Link>
+          </Button>
+          <div className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
             {idx + 1} / {questions.length}
           </div>
-          <Button variant="outline" size="icon" onClick={() => navigate({ to: "/library" })} className="border-white/30 bg-white/10 text-white hover:bg-white/20">
+          <Button size="icon" variant="ghost" onClick={() => navigate({ to: "/studio/$id", params: { id } })}>
             <X className="h-4 w-4" />
           </Button>
         </div>
       </header>
 
-      <div className="relative z-10 flex flex-col items-center justify-center px-6 pt-8 pb-32">
-        <div className="mx-auto max-w-5xl w-full text-center">
-          <div className="font-display text-xs uppercase tracking-widest text-white/50">Questão {idx + 1}</div>
-          <h1 className="mt-4 font-display text-4xl md:text-6xl font-bold leading-tight">{q?.question}</h1>
-          <div className="mt-12 grid gap-4 md:grid-cols-2">
-            {q?.options.map((opt: string, i: number) => {
-              const isRight = i === q.correct_index;
-              return (
-                <div key={i} className={`rounded-2xl border p-6 text-left backdrop-blur transition-smooth ${reveal && isRight ? "border-success bg-success/20 scale-105" : reveal ? "border-white/10 bg-white/5 opacity-50" : "border-white/20 bg-white/10 hover:bg-white/15"}`}>
-                  <div className="flex items-center gap-4">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl font-display text-xl font-bold ${reveal && isRight ? "bg-success text-white" : "bg-white/10"}`}>
-                      {String.fromCharCode(65+i)}
-                    </div>
-                    <span className="font-display text-xl font-semibold">{opt}</span>
-                  </div>
-                </div>
-              );
-            })}
+      <main className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-12">
+        <div className="w-full max-w-5xl">
+          <div className="text-center">
+            <div className="font-display text-[11px] uppercase tracking-widest text-muted-foreground">
+              Questão {idx + 1}
+            </div>
+            <h1 className="mt-4 font-display text-3xl md:text-5xl font-bold leading-tight">
+              {q.question || q.content || "—"}
+            </h1>
           </div>
-          {reveal && q?.explanation && (
-            <p className="mt-8 text-white/70 italic max-w-2xl mx-auto animate-fade-up">💡 {q.explanation}</p>
+
+          {options.length > 0 && (
+            <div className="mt-10 grid gap-3 md:grid-cols-2">
+              {options.map((opt, i) => {
+                const isRight = i === correctIdx;
+                return (
+                  <div
+                    key={i}
+                    className={`rounded-xl border-2 bg-surface p-5 text-left transition-smooth ${
+                      reveal && isRight
+                        ? "border-success bg-success/10"
+                        : reveal && correctIdx >= 0
+                          ? "border-border opacity-50"
+                          : "border-border hover:border-strong"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-lg font-display text-lg font-bold ${
+                        reveal && isRight ? "bg-success text-white" : "bg-muted text-foreground"
+                      }`}>
+                        {String.fromCharCode(65 + i)}
+                      </div>
+                      <span className="font-display text-lg font-medium">{opt}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {q.type === "short" && reveal && q.answer && (
+            <div className="mx-auto mt-10 max-w-2xl rounded-xl border-2 border-success bg-success/10 p-6 text-center font-display text-2xl font-semibold">
+              {q.answer}
+            </div>
+          )}
+
+          {reveal && q.explanation && (
+            <p className="mx-auto mt-8 max-w-2xl text-center italic text-muted-foreground animate-fade-up">
+              💡 {q.explanation}
+            </p>
           )}
         </div>
-      </div>
+      </main>
 
-      <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between p-6">
-        <Button variant="outline" disabled={idx === 0} onClick={() => { setIdx(idx - 1); setReveal(false); }} className="border-white/30 bg-white/10 text-white hover:bg-white/20 h-12 px-6">
-          <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
+      <footer className="flex items-center justify-between border-t border-border bg-surface px-6 py-3">
+        <Button variant="outline" disabled={idx === 0} onClick={() => { setIdx(idx - 1); setReveal(false); }}>
+          <ChevronLeft className="mr-1.5 h-4 w-4" /> Anterior
         </Button>
-        <Button onClick={() => setReveal(!reveal)} className="bg-white text-primary hover:bg-white/90 h-12 px-8 font-semibold">
-          {reveal ? "Ocultar resposta" : "Revelar resposta"}
+        <Button variant={reveal ? "outline" : "default"} onClick={() => setReveal(!reveal)}>
+          {reveal ? <><EyeOff className="mr-1.5 h-4 w-4" /> Ocultar resposta</> : <><Eye className="mr-1.5 h-4 w-4" /> Revelar resposta</>}
         </Button>
-        <Button disabled={last} onClick={() => { setIdx(idx + 1); setReveal(false); }} className="bg-gradient-primary h-12 px-6 shadow-glow">
-          Próxima <ChevronRight className="ml-2 h-4 w-4" />
+        <Button disabled={last} onClick={() => { setIdx(idx + 1); setReveal(false); }}>
+          Próxima <ChevronRight className="ml-1.5 h-4 w-4" />
         </Button>
       </footer>
     </div>
